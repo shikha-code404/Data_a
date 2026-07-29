@@ -6,6 +6,7 @@ import { ingestGitHubData } from "@/lib/github/ingestion";
 import { extractTextFromPDF, parseResumeAndSave } from "@/lib/resume/parser";
 import { calculateCandidateTalentScore } from "@/lib/agents/talentScore";
 import { verifyCandidateSkillBadges } from "@/lib/badges/verifier";
+import { getProfileCompletenessForUser } from "@/lib/profile/completeness";
 
 // Preset default candidate ID in database for testing
 const TEST_CANDIDATE_USER_ID = "0ee73e0e-0529-4480-a16c-15748a277bde";
@@ -148,6 +149,25 @@ export async function testBadgesVerification(userId?: string) {
     return {
       success: result.success,
       badges: result.badges,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message,
+    };
+  }
+}
+
+export async function testCompletenessCalculation(userId?: string) {
+  try {
+    const targetUserId = userId || TEST_CANDIDATE_USER_ID;
+    
+    // Run completeness calculation
+    const completeness = await getProfileCompletenessForUser(targetUserId);
+
+    return {
+      success: true,
+      completeness,
     };
   } catch (err: any) {
     return {

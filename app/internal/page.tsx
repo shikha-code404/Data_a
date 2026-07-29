@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { submitAgentTest, testGitHubIngestion, testResumePDFUpload, testTalentScoring, testBadgesVerification } from "./actions";
+import { submitAgentTest, testGitHubIngestion, testResumePDFUpload, testTalentScoring, testBadgesVerification, testCompletenessCalculation } from "./actions";
 
 const AGENT_PRESETS = [
   {
@@ -70,6 +70,13 @@ const AGENT_PRESETS = [
   {
     type: "skill_badges_pipeline",
     label: "Verified Skill Badges",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde"
+    }
+  },
+  {
+    type: "profile_completeness_pipeline",
+    label: "Profile Completeness",
     defaultPayload: {
       candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde"
     }
@@ -162,6 +169,18 @@ export default function DebugRoute() {
           });
         } else {
           setErrorMsg(res.error || "Skill Badges Verification failed.");
+        }
+      } else if (agentType === "profile_completeness_pipeline") {
+        const payload = JSON.parse(payloadText);
+        const res = await testCompletenessCalculation(payload.candidateId);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.completeness,
+            cachedRows: []
+          });
+        } else {
+          setErrorMsg(res.error || "Profile completeness calculation failed.");
         }
       } else {
         if (agentType === "custom" && !customAgentType.trim()) {
