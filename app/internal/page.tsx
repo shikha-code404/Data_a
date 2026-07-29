@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { submitAgentTest } from "./actions";
+import { submitAgentTest, testGitHubIngestion, testResumePDFUpload, testTalentScoring, testBadgesVerification } from "./actions";
 
 const AGENT_PRESETS = [
   {
@@ -45,6 +45,34 @@ const AGENT_PRESETS = [
       ],
       ai_content_likelihood: "low"
     }
+  },
+  {
+    type: "github_ingestion",
+    label: "GitHub Ingestion Pipeline",
+    defaultPayload: {
+      username: "alexrivera-dev"
+    }
+  },
+  {
+    type: "resume_upload",
+    label: "Resume Upload Pipeline",
+    defaultPayload: {
+      note: "Use the file upload field below to parse a PDF resume."
+    }
+  },
+  {
+    type: "talent_score_pipeline",
+    label: "Talent Score Pipeline",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde"
+    }
+  },
+  {
+    type: "skill_badges_pipeline",
+    label: "Verified Skill Badges",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde"
+    }
   }
 ];
 
@@ -56,6 +84,7 @@ export default function DebugRoute() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   const activeAgentType = agentType === "custom" ? customAgentType : agentType;
 
@@ -65,6 +94,7 @@ export default function DebugRoute() {
     setAgentType(preset.type);
     setPayloadText(JSON.stringify(preset.defaultPayload, null, 2));
     setErrorMsg(null);
+    setUploadFile(null);
   };
 
   // Submit test
@@ -74,22 +104,87 @@ export default function DebugRoute() {
     setErrorMsg(null);
     setResult(null);
 
-    if (agentType === "custom" && !customAgentType.trim()) {
-      setErrorMsg("Please specify a custom agent type.");
+    try {
+      if (agentType === "github_ingestion") {
+        const payload = JSON.parse(payloadText);
+        const res = await testGitHubIngestion(payload.username);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.githubData,
+            cachedRows: res.cachedRows
+          });
+        } else {
+          setErrorMsg(res.error || "GitHub Ingestion failed.");
+        }
+      } else if (agentType === "resume_upload") {
+        if (!uploadFile) {
+          setErrorMsg("Please select a PDF resume file to upload.");
+          setIsLoading(false);
+          return;
+        }
+        const formData = new FormData();
+        formData.append("file", uploadFile);
+        const res = await testResumePDFUpload(formData);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: {
+              extractedRawTextSnippet: res.rawText,
+              parsedResumeData: res.resumeData,
+              needsManualReview: res.needsReview
+            },
+            cachedRows: []
+          });
+        } else {
+          setErrorMsg(res.error || "Resume parsing failed.");
+        }
+      } else if (agentType === "talent_score_pipeline") {
+        const payload = JSON.parse(payloadText);
+        const res = await testTalentScoring(payload.candidateId);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.talentScore,
+            cachedRows: res.cachedRows
+          });
+        } else {
+          setErrorMsg(res.error || "Talent Scoring failed.");
+        }
+      } else if (agentType === "skill_badges_pipeline") {
+        const payload = JSON.parse(payloadText);
+        const res = await testBadgesVerification(payload.candidateId);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.badges,
+            cachedRows: []
+          });
+        } else {
+          setErrorMsg(res.error || "Skill Badges Verification failed.");
+        }
+      } else {
+        if (agentType === "custom" && !customAgentType.trim()) {
+          setErrorMsg("Please specify a custom agent type.");
+          setIsLoading(false);
+          return;
+        }
+
+        const res = await submitAgentTest(activeAgentType, payloadText);
+        setIsLoading(false);
+
+        if (res.success) {
+          setResult({
+            response: res.response,
+            cachedRows: res.cachedRows
+          });
+        } else {
+          setErrorMsg(res.error || "An unknown error occurred.");
+        }
+      }
+    } catch (err: any) {
       setIsLoading(false);
-      return;
-    }
-
-    const res = await submitAgentTest(activeAgentType, payloadText);
-    setIsLoading(false);
-
-    if (res.success) {
-      setResult({
-        response: res.response,
-        cachedRows: res.cachedRows
-      });
-    } else {
-      setErrorMsg(res.error || "An unknown error occurred.");
+      setErrorMsg(err.message || "An error occurred.");
     }
   };
 
@@ -171,15 +266,27 @@ export default function DebugRoute() {
               </div>
             )}
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-slate-300">Input Payload (JSON)</label>
-              <textarea
-                rows={10}
-                value={payloadText}
-                onChange={(e) => setPayloadText(e.target.value)}
-                className="bg-slate-950/80 border border-slate-800 rounded-lg p-4 font-mono text-xs text-purple-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition leading-relaxed"
-              />
-            </div>
+            {agentType === "resume_upload" ? (
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-350">Select PDF Resume File</label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  className="bg-slate-950/60 border border-slate-800 rounded-lg px-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition file:bg-slate-900 file:border-slate-800 file:text-slate-200 file:text-xs file:py-1 file:px-2.5 file:rounded file:mr-2"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-300">Input Payload (JSON)</label>
+                <textarea
+                  rows={10}
+                  value={payloadText}
+                  onChange={(e) => setPayloadText(e.target.value)}
+                  className="bg-slate-950/80 border border-slate-800 rounded-lg p-4 font-mono text-xs text-purple-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition leading-relaxed"
+                />
+              </div>
+            )}
 
             {errorMsg && (
               <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-xs rounded-lg p-3">

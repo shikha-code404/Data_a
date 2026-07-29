@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { mockTalentScore, mockJobs, mockRoadmapSteps } from "@/lib/mock-data";
 import { JobCard } from "@/components/JobCard";
 import { RadarScoreChart } from "@/components/RadarScoreChart";
+import { getCandidateProfileData, uploadResume } from "./actions";
+import { ResumeData } from "@/lib/resume/parser";
 import {
   Sparkles,
   Award,
@@ -13,10 +16,96 @@ import {
   ToggleLeft,
   ToggleRight,
   Info,
+  FileText,
+  UploadCloud,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 
+const GitHubIcon = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+    <path d="M9 18c-4.51 2-5-2-7-2" />
+  </svg>
+);
+
 export default function CandidateDashboard() {
+  const router = useRouter();
   const [isLoadingState, setIsLoadingState] = useState(false);
+  
+  // Profile integrations state
+  const [profileData, setProfileData] = useState<{
+    githubUsername: string | null;
+    isGitHubConnected: boolean;
+    githubData: any | null;
+    resumeData: ResumeData | null;
+    resumeNeedsReview: boolean;
+  } | null>(null);
+  
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Load profile data on mount
+  const loadProfile = async () => {
+    const res = await getCandidateProfileData();
+    if (res.success) {
+      if (!res.talentProfile) {
+        router.push("/candidate/onboarding");
+        return;
+      }
+      setProfileData({
+        githubUsername: res.githubUsername ?? null,
+        isGitHubConnected: !!res.isGitHubConnected,
+        githubData: res.githubData ?? null,
+        resumeData: res.resumeData ?? null,
+        resumeNeedsReview: res.resumeNeedsReview ?? false,
+      });
+    }
+    setIsLoadingData(false);
+  };
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  // Handle PDF Resume Upload
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      setUploadError("Please upload a valid PDF file.");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await uploadResume(formData);
+      if (res.success) {
+        await loadProfile();
+      } else {
+        setUploadError(res.error || "Failed to process resume.");
+      }
+    } catch (err: any) {
+      setUploadError(err.message || "An error occurred during upload.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Skill badges checklist (mock verified skills)
   const verifiedSkills = [
@@ -213,6 +302,152 @@ export default function CandidateDashboard() {
                   </span>
                 ))}
               </div>
+            </div>
+
+            {/* Developer Integrations / GitHub Connection */}
+            <div className="glass-card p-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="space-y-1">
+                <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-50 uppercase tracking-wider flex items-center gap-1.5">
+                  <GitHubIcon className="h-4.5 w-4.5 text-zinc-900 dark:text-zinc-50" />
+                  GitHub Integration
+                </h3>
+                {isLoadingData ? (
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Checking connection status...</p>
+                ) : profileData?.isGitHubConnected ? (
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Connected as <span className="font-bold text-indigo-650 dark:text-indigo-400">@{profileData.githubUsername}</span>
+                  </p>
+                ) : (
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Sync your GitHub repositories to showcase coding activity and build dynamic portfolio scores.
+                  </p>
+                )}
+              </div>
+              
+              {!isLoadingData && (
+                profileData?.isGitHubConnected ? (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-450 border border-emerald-100/55 dark:border-emerald-900/30 text-xs font-semibold shadow-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Connected
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => {
+                      window.location.href = "/api/auth/github";
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-50 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 text-xs font-bold transition-all shadow-sm shadow-zinc-900/10 hover:scale-[1.01]"
+                  >
+                    <GitHubIcon className="w-4 h-4" />
+                    Connect GitHub
+                  </button>
+                )
+              )}
+            </div>
+
+            {/* Resume Vetting Section */}
+            <div className="glass-card p-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm space-y-4">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1 flex-1">
+                  <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-50 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText className="h-4.5 w-4.5 text-zinc-900 dark:text-zinc-50" />
+                    AI Resume Parsing & Extraction
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Upload your resume to automatically extract skills, projects, and work history.
+                  </p>
+                </div>
+                {profileData?.resumeNeedsReview && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-450 border border-amber-200 dark:border-amber-900/30 text-[10px] font-bold uppercase tracking-wider">
+                    <AlertTriangle className="w-3 h-3" />
+                    Needs Review
+                  </span>
+                )}
+              </div>
+
+              {isUploading ? (
+                <div className="py-8 flex flex-col items-center justify-center gap-3 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/20">
+                  <RefreshCw className="h-8 w-8 text-indigo-500 animate-spin" />
+                  <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Extracting and running AI parsing...</p>
+                  <p className="text-[10px] text-zinc-400">This may take a few seconds as the model reviews the text.</p>
+                </div>
+              ) : profileData?.resumeData ? (
+                <div className="space-y-4 bg-zinc-50/50 dark:bg-zinc-900/20 border border-zinc-100 dark:border-zinc-900/60 p-4 rounded-xl">
+                  <div className="flex justify-between items-center border-b border-zinc-155 dark:border-zinc-850 pb-3">
+                    <div>
+                      <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200">{profileData.resumeData.name}</p>
+                      <p className="text-[10px] text-zinc-400">
+                        {profileData.resumeData.email || "No email"} • {profileData.resumeData.phone || "No phone"}
+                      </p>
+                    </div>
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition-colors">
+                      <UploadCloud className="w-3.5 h-3.5" />
+                      Update PDF
+                      <input type="file" accept=".pdf" onChange={handleResumeUpload} className="hidden" />
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Latest Experience</p>
+                      {profileData.resumeData.experience?.[0] ? (
+                        <div>
+                          <p className="font-bold text-zinc-750 dark:text-zinc-350">{profileData.resumeData.experience[0].role}</p>
+                          <p className="text-zinc-500 dark:text-zinc-400 text-[11px]">
+                            {profileData.resumeData.experience[0].company} • {profileData.resumeData.experience[0].start_date} - {profileData.resumeData.experience[0].end_date || "Present"}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-zinc-450 dark:text-zinc-550 italic">No experience found</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Latest Education</p>
+                      {profileData.resumeData.education?.[0] ? (
+                        <div>
+                          <p className="font-bold text-zinc-750 dark:text-zinc-350">
+                            {profileData.resumeData.education[0].degree} in {profileData.resumeData.education[0].field}
+                          </p>
+                          <p className="text-zinc-500 dark:text-zinc-400 text-[11px]">
+                            {profileData.resumeData.education[0].institution}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-zinc-450 dark:text-zinc-550 italic">No education found</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {profileData.resumeData.skills && profileData.resumeData.skills.length > 0 && (
+                    <div className="space-y-1.5 border-t border-zinc-150 dark:border-zinc-850 pt-3">
+                      <p className="text-[10px] font-bold text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Extracted Skills</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {profileData.resumeData.skills.slice(0, 10).map((skill: string) => (
+                          <span key={skill} className="text-[10px] font-semibold px-2 py-0.5 bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-350 rounded border border-zinc-200/50 dark:border-zinc-800/40">
+                            {skill}
+                          </span>
+                        ))}
+                        {profileData.resumeData.skills.length > 10 && (
+                          <span className="text-[10px] text-zinc-450 dark:text-zinc-500 font-semibold px-1 py-0.5">
+                            +{profileData.resumeData.skills.length - 10} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="border border-dashed border-zinc-250 dark:border-zinc-800 hover:border-indigo-400 dark:hover:border-indigo-650 transition-colors p-6 rounded-xl text-center bg-zinc-50/50 dark:bg-zinc-900/10">
+                  <label className="cursor-pointer flex flex-col items-center justify-center gap-2">
+                    <UploadCloud className="h-8 w-8 text-zinc-400 dark:text-zinc-500" />
+                    <span className="text-xs font-bold text-zinc-750 dark:text-zinc-300">Click to Upload Resume (PDF)</span>
+                    <span className="text-[10px] text-zinc-400">Standard PDF formats are processed securely</span>
+                    <input type="file" accept=".pdf" onChange={handleResumeUpload} className="hidden" />
+                  </label>
+                  {uploadError && (
+                    <p className="mt-2 text-xs font-semibold text-red-650 dark:text-red-400">{uploadError}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Top Job Matches */}
