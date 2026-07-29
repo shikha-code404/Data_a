@@ -1,9 +1,78 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { submitAgentTest, testGitHubIngestion, testResumePDFUpload, testTalentScoring, testBadgesVerification, testCompletenessCalculation } from "./actions";
+import {
+  submitAgentTest,
+  testGitHubIngestion,
+  testResumePDFUpload,
+  testTalentScoring,
+  testBadgesVerification,
+  testCompletenessCalculation,
+  testCandidateEmbeddingAction,
+  testJobEmbeddingAction,
+  testMatchingEngineAction,
+  testRecruiterSearchAction,
+  testCreateJobFlowAction,
+} from "./actions";
 
 const AGENT_PRESETS = [
+  {
+    type: "recruiter_job_creation_flow",
+    label: "Recruiter: Job Creation & Auto-Matching Flow",
+    defaultPayload: {
+      title: "Senior Full Stack AI Developer",
+      description: "Build intelligent candidate matching applications with Next.js App Router, Supabase vector embeddings, and TypeScript.",
+      skills: "React, Next.js, Supabase, TypeScript",
+      location: "Remote"
+    }
+  },
+  {
+    type: "candidate_embedding",
+    label: "Phase 2: Candidate Embedding (@xenova)",
+    defaultPayload: {
+      userId: "0ee73e0e-0529-4480-a16c-15748a277bde"
+    }
+  },
+
+  {
+    type: "job_embedding",
+    label: "Phase 2: Job Embedding (@xenova)",
+    defaultPayload: {
+      title: "Senior Full Stack Engineer",
+      company: "Hirespark Labs",
+      description: "Building next-gen AI recruitment platforms with Next.js, Supabase, and Transformers.",
+      skills: "React, Next.js, TypeScript, Supabase"
+    }
+  },
+  {
+    type: "matching_engine",
+    label: "Phase 2: Hybrid Matching Engine",
+    defaultPayload: {
+      jobId: "default-test-job-id",
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde"
+    }
+  },
+  {
+    type: "recruiter_nl_search",
+    label: "Copilot Rehearsed 1: React + Hackathons",
+    defaultPayload: {
+      query: "Find React developers with hackathon experience"
+    }
+  },
+  {
+    type: "recruiter_nl_search",
+    label: "Copilot Rehearsed 2: ML + GitHub Activity",
+    defaultPayload: {
+      query: "Show ML engineers with strong GitHub activity"
+    }
+  },
+  {
+    type: "recruiter_nl_search",
+    label: "Copilot Rehearsed 3: Score > 85",
+    defaultPayload: {
+      query: "Find candidates above 85 talent score"
+    }
+  },
   {
     type: "talentScoreAgent",
     label: "Talent Score Agent",
@@ -20,30 +89,8 @@ const AGENT_PRESETS = [
     type: "resumeAgent",
     label: "Resume Parsing Agent",
     defaultPayload: {
-      raw_ocr_text: "Shikha Singh - Full Stack Engineer. Experience: 3 years building AI applications with React, Next.js, Node.js, and Postgres. Lead developer for multiple hackathons.",
+      raw_ocr_text: "Shikha Singh - Full Stack Engineer. Experience: 3 years building AI applications with React, Next.js, Node.js, and Postgres.",
       target_role: "Senior AI Platform Developer"
-    }
-  },
-  {
-    type: "interviewAgent",
-    label: "Interview Analysis Agent",
-    defaultPayload: {
-      candidate_id: "uuid-candidate-123",
-      transcript: "Interviewer: How do you handle RLS in Supabase?\nCandidate: I set up restrictive policies matching auth.uid() with the user_id column. For system services, I use the service_role key to bypass RLS safely on secure server routes.",
-      communication_skills_rating: 9,
-      technical_skills_rating: 9
-    }
-  },
-  {
-    type: "fraudAgent",
-    label: "Fraud & Content Auditor",
-    defaultPayload: {
-      candidate_id: "uuid-candidate-123",
-      submitted_documents: [
-        { type: "resume", character_count: 2400, perplexity_score: 12.5 },
-        { type: "github_contribution", prs_merged: 42 }
-      ],
-      ai_content_likelihood: "low"
     }
   },
   {
@@ -54,34 +101,14 @@ const AGENT_PRESETS = [
     }
   },
   {
-    type: "resume_upload",
-    label: "Resume Upload Pipeline",
-    defaultPayload: {
-      note: "Use the file upload field below to parse a PDF resume."
-    }
-  },
-  {
     type: "talent_score_pipeline",
     label: "Talent Score Pipeline",
     defaultPayload: {
       candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde"
     }
-  },
-  {
-    type: "skill_badges_pipeline",
-    label: "Verified Skill Badges",
-    defaultPayload: {
-      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde"
-    }
-  },
-  {
-    type: "profile_completeness_pipeline",
-    label: "Profile Completeness",
-    defaultPayload: {
-      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde"
-    }
   }
 ];
+
 
 export default function DebugRoute() {
   const [selectedPreset, setSelectedPreset] = useState(AGENT_PRESETS[0]);
@@ -112,7 +139,52 @@ export default function DebugRoute() {
     setResult(null);
 
     try {
-      if (agentType === "github_ingestion") {
+      if (agentType === "recruiter_job_creation_flow") {
+        const payload = JSON.parse(payloadText);
+        const res = await testCreateJobFlowAction(payload.title, payload.description, payload.skills, payload.location);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({ response: res });
+        } else {
+          setErrorMsg(res.error || "Job creation flow failed.");
+        }
+      } else if (agentType === "candidate_embedding") {
+        const payload = JSON.parse(payloadText);
+        const res = await testCandidateEmbeddingAction(payload.userId);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({ response: res });
+        } else {
+          setErrorMsg(res.error || "Candidate Embedding failed.");
+        }
+      } else if (agentType === "job_embedding") {
+        const payload = JSON.parse(payloadText);
+        const res = await testJobEmbeddingAction(payload.title, payload.company, payload.description, payload.skills);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({ response: res });
+        } else {
+          setErrorMsg(res.error || "Job Embedding failed.");
+        }
+      } else if (agentType === "matching_engine") {
+        const payload = JSON.parse(payloadText);
+        const res = await testMatchingEngineAction(payload.jobId, payload.candidateId);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({ response: res });
+        } else {
+          setErrorMsg(res.error || "Matching Engine failed.");
+        }
+      } else if (agentType === "recruiter_nl_search") {
+        const payload = JSON.parse(payloadText);
+        const res = await testRecruiterSearchAction(payload.query);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({ response: res.results, query: res.query });
+        } else {
+          setErrorMsg(res.error || "Recruiter Search failed.");
+        }
+      } else if (agentType === "github_ingestion") {
         const payload = JSON.parse(payloadText);
         const res = await testGitHubIngestion(payload.username);
         setIsLoading(false);
@@ -123,28 +195,6 @@ export default function DebugRoute() {
           });
         } else {
           setErrorMsg(res.error || "GitHub Ingestion failed.");
-        }
-      } else if (agentType === "resume_upload") {
-        if (!uploadFile) {
-          setErrorMsg("Please select a PDF resume file to upload.");
-          setIsLoading(false);
-          return;
-        }
-        const formData = new FormData();
-        formData.append("file", uploadFile);
-        const res = await testResumePDFUpload(formData);
-        setIsLoading(false);
-        if (res.success) {
-          setResult({
-            response: {
-              extractedRawTextSnippet: res.rawText,
-              parsedResumeData: res.resumeData,
-              needsManualReview: res.needsReview
-            },
-            cachedRows: []
-          });
-        } else {
-          setErrorMsg(res.error || "Resume parsing failed.");
         }
       } else if (agentType === "talent_score_pipeline") {
         const payload = JSON.parse(payloadText);
@@ -158,6 +208,7 @@ export default function DebugRoute() {
         } else {
           setErrorMsg(res.error || "Talent Scoring failed.");
         }
+
       } else if (agentType === "skill_badges_pipeline") {
         const payload = JSON.parse(payloadText);
         const res = await testBadgesVerification(payload.candidateId);
@@ -241,11 +292,11 @@ export default function DebugRoute() {
             <div className="grid grid-cols-2 gap-2 mt-3">
               {AGENT_PRESETS.map((preset) => (
                 <button
-                  key={preset.type}
+                  key={preset.label}
                   type="button"
                   onClick={() => handlePresetSelect(preset)}
                   className={`px-3 py-2 rounded-lg text-xs font-medium text-left border transition-all ${
-                    agentType === preset.type
+                    agentType === preset.type && payloadText.includes(JSON.stringify(preset.defaultPayload).slice(0, 15))
                       ? "bg-purple-600/20 border-purple-500/40 text-purple-300 shadow-md"
                       : "bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200"
                   }`}
@@ -360,14 +411,14 @@ export default function DebugRoute() {
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl flex-1 flex flex-col">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-slate-200">3. Cached Database Entries</h2>
-              {result && (
+              {result && Array.isArray(result.cachedRows) && (
                 <span className="text-xs text-purple-400 font-semibold">
                   {result.cachedRows.length} rows written for {activeAgentType}
                 </span>
               )}
             </div>
             <div className="mt-4 bg-slate-950 border border-slate-900 rounded-xl p-4 font-mono text-xs flex-1 min-h-[200px] overflow-auto max-h-[350px]">
-              {result && result.cachedRows.length > 0 ? (
+              {result && Array.isArray(result.cachedRows) && result.cachedRows.length > 0 ? (
                 <div className="flex flex-col gap-4">
                   {result.cachedRows.map((row: any, idx: number) => (
                     <div key={row.id || idx} className="border-b border-slate-800/80 pb-4 last:border-b-0 last:pb-0">

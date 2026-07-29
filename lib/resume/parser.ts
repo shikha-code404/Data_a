@@ -1,7 +1,13 @@
+if (typeof (globalThis as any).DOMMatrix === "undefined") {
+  (globalThis as any).DOMMatrix = class DOMMatrix {
+    a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
+  };
+}
 const pdf = require("pdf-parse");
 import { z } from "zod";
 import { callAgent } from "../agents/callAgent";
 import { getSupabaseAdmin } from "../db/client";
+
 
 // Zod schemas defining the strict target format
 const EducationSchema = z.object({
@@ -99,8 +105,15 @@ function sanitizePartialRecord(raw: any): ResumeData {
  * Extracts raw text from a PDF Buffer.
  */
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
-  const data = await pdf(buffer);
-  return data.text || "";
+  let pdfParser = pdf;
+  if (typeof pdfParser !== "function" && (pdfParser as any)?.default) {
+    pdfParser = (pdfParser as any).default;
+  }
+  if (typeof pdfParser === "function") {
+    const data = await pdfParser(buffer);
+    return data.text || "";
+  }
+  return "";
 }
 
 /**

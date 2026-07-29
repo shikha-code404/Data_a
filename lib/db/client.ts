@@ -1,10 +1,13 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
+
 // Browser client using the anon key + RLS (for candidate/recruiter authenticated requests)
 export const supabaseBrowser = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  supabaseUrl,
+  supabaseAnonKey
 );
 
 // Server-only client using the service_role key (for API routes that need to write to agent_responses or bypass RLS)
@@ -13,9 +16,10 @@ export function getSupabaseAdmin() {
   if (typeof window !== "undefined") {
     throw new Error("getSupabaseAdmin can only be used on the server side!");
   }
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    supabaseUrl,
+    serviceRoleKey,
     {
       auth: {
         persistSession: false,
@@ -24,3 +28,4 @@ export function getSupabaseAdmin() {
     }
   );
 }
+
