@@ -13,9 +13,77 @@ import {
   testMatchingEngineAction,
   testRecruiterSearchAction,
   testCreateJobFlowAction,
+  testSkillVerificationAction,
+  testInterviewGenerationAction,
+  testInterviewSubmitAction,
+  testTeamContributionsAction,
 } from "./actions";
 
 const AGENT_PRESETS = [
+  {
+    type: "skill_verification_pass",
+    label: "⭐ Phase 3: Skill Verify — React PASS",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde",
+      skill: "React",
+      mode: "pass"
+    }
+  },
+  {
+    type: "skill_verification_fail",
+    label: "⭐ Phase 3: Skill Verify — SQL FAIL",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde",
+      skill: "SQL",
+      mode: "fail"
+    }
+  },
+  {
+    type: "interview_generate",
+    label: "⭐ Phase 3: Interview — Generate Questions",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde"
+    }
+  },
+  {
+    type: "interview_submit_strong",
+    label: "⭐ Phase 3: Interview — Submit STRONG Answers",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde",
+      mode: "strong"
+    }
+  },
+  {
+    type: "interview_submit_weak",
+    label: "⭐ Phase 3: Interview — Submit WEAK Answers",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde",
+      mode: "weak"
+    }
+  },
+  {
+    type: "team_analytics_balanced",
+    label: "⭐ Phase 3: Team Analytics — Balanced Team (A, B, C)",
+    defaultPayload: {
+      teamId: "hackathon-team-1",
+      memberIds: [
+        "0ee73e0e-0529-4480-a16c-15748a277bde",
+        "1ee73e0e-0529-4480-a16c-15748a277bdf",
+        "2ee73e0e-0529-4480-a16c-15748a277be0"
+      ]
+    }
+  },
+  {
+    type: "team_analytics_unbalanced",
+    label: "⭐ Phase 3: Team Analytics — Unbalanced Team (A, C)",
+    defaultPayload: {
+      teamId: "hackathon-team-2",
+      memberIds: [
+        "0ee73e0e-0529-4480-a16c-15748a277bde",
+        "2ee73e0e-0529-4480-a16c-15748a277be0"
+      ]
+    }
+  },
   {
     type: "recruiter_job_creation_flow",
     label: "Recruiter: Job Creation & Auto-Matching Flow",
@@ -139,7 +207,50 @@ export default function DebugRoute() {
     setResult(null);
 
     try {
-      if (agentType === "recruiter_job_creation_flow") {
+      if (agentType === "skill_verification_pass" || agentType === "skill_verification_fail") {
+        const payload = JSON.parse(payloadText);
+        const mode: "pass" | "fail" = payload.mode === "fail" ? "fail" : "pass";
+        const res = await testSkillVerificationAction(
+          payload.candidateId,
+          payload.skill,
+          mode
+        );
+        setIsLoading(false);
+        if (res.success) {
+          setResult({ response: res });
+        } else {
+          setErrorMsg(res.error || "Skill Verification failed.");
+        }
+      } else if (agentType === "interview_generate") {
+        const payload = JSON.parse(payloadText);
+        const res = await testInterviewGenerationAction(payload.candidateId);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({ response: res });
+        } else {
+          setErrorMsg(res.error || "Interview Question Generation failed.");
+        }
+      } else if (agentType === "interview_submit_strong" || agentType === "interview_submit_weak") {
+        const payload = JSON.parse(payloadText);
+        const mode: "strong" | "weak" = agentType === "interview_submit_weak" ? "weak" : "strong";
+        const res = await testInterviewSubmitAction(payload.candidateId, mode);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({ response: res });
+        } else {
+          setErrorMsg(res.error || "Interview Evaluation failed.");
+        }
+      } else if (agentType === "team_analytics_balanced" || agentType === "team_analytics_unbalanced") {
+        const payload = JSON.parse(payloadText);
+        const res = await testTeamContributionsAction(payload.teamId, payload.memberIds);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({ response: res });
+        } else {
+          setErrorMsg(res.error || "Team Contributions Analytics failed.");
+        }
+      } else if (agentType === "recruiter_job_creation_flow") {
+
         const payload = JSON.parse(payloadText);
         const res = await testCreateJobFlowAction(payload.title, payload.description, payload.skills, payload.location);
         setIsLoading(false);
@@ -274,10 +385,13 @@ export default function DebugRoute() {
           </div>
           <div className="flex gap-2">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20">
-              Ollama: qwen2.5:7b-instruct
+              Ollama: qwen3.5:9b
             </span>
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20">
               HF Fallback: Enabled
+            </span>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+              Phase 3: Verification
             </span>
           </div>
         </div>

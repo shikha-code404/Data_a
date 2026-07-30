@@ -7,6 +7,14 @@ import { extractTextFromPDF, parseResumeAndSave } from "@/lib/resume/parser";
 import { calculateCandidateTalentScore } from "@/lib/agents/talentScore";
 import { verifyCandidateSkillBadges } from "@/lib/badges/verifier";
 import { getProfileCompletenessForUser } from "@/lib/profile/completeness";
+import {
+  runSkillVerification,
+  getMCQQuestionsForSkill,
+  FREE_RESPONSE_QUESTIONS,
+} from "@/lib/verification/engine";
+import { generateInterviewQuestions, submitAndEvaluateInterview } from "@/lib/interview/engine";
+import { calculateTeamContributions } from "@/lib/analytics/team";
+
 
 // Preset default candidate ID in database for testing
 const TEST_CANDIDATE_USER_ID = "0ee73e0e-0529-4480-a16c-15748a277bde";
@@ -370,6 +378,202 @@ export async function testRecruiterSearchAction(query: string) {
       success: true,
       query,
       results,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message,
+    };
+  }
+}
+
+/**
+ * Phase 3 — Skill Verification harness action.
+ *
+ * mode = 'pass':  answers all MCQs correctly + provides a strong free-response answer.
+ * mode = 'fail':  answers all MCQs incorrectly + provides a weak free-response answer.
+ *
+ * The action fetches questions from the DB (same order the engine uses) so answers
+ * are always positionally correct — no hardcoded option strings in the preset.
+ */
+export async function testSkillVerificationAction(
+  candidateId: string,
+  skill: string,
+  mode: "pass" | "fail"
+) {
+  try {
+    const targetCandidateId = candidateId || TEST_CANDIDATE_USER_ID;
+    const targetSkill = skill || "React";
+
+    // Fetch questions in the same stable order the engine will use
+    const questions = await getMCQQuestionsForSkill(targetSkill);
+    if (questions.length === 0) {
+      return {
+        success: false,
+        error: `No MCQ questions found for skill "${targetSkill}". Has migration 0012 been applied?`,
+      };
+    }
+
+    // Build MCQ answers based on mode
+    const mcqAnswers: string[] = questions.map((q) => {
+      if (mode === "pass") {
+        return q.correct_answer;
+      } else {
+        // Pick the first option that is NOT the correct answer
+        const wrongOption = (q.options as string[]).find(
+          (opt) => opt.trim() !== q.correct_answer.trim()
+        );
+        return wrongOption ?? q.options[0] ?? "";
+      }
+    });
+
+    // Build free-response answer based on mode
+    const STRONG_FREE_RESPONSE: Record<string, string> = {
+      React:
+        "React's reconciliation algorithm performs a diffing comparison between the previous and next virtual DOM trees. " +
+        "It uses a heuristic O(n) algorithm: it assumes elements of different types produce different trees and siblings are " +
+        "uniquely identified by their key prop. When keys are stable and unique, React can correctly identify moved items " +
+        "and reuse DOM nodes instead of destroying and recreating them, which is the primary reason keys are critical in lists.",
+      Python:
+        "A generator uses the yield keyword to produce values lazily — it computes one item at a time and suspends execution " +
+        "between yields, so only one value is held in memory at a time. A list comprehension evaluates eagerly, building the " +
+        "entire list in memory at once. For large datasets, generators are far more memory-efficient; for small datasets, " +
+        "list comprehensions are simpler and faster due to fewer function-call overheads.",
+      SQL:
+        "INNER JOIN returns only rows where the join condition matches in both tables, discarding unmatched rows from either side. " +
+        "LEFT JOIN returns all rows from the left table and NULLs for any unmatched columns from the right. A correlated subquery " +
+        "references the outer query's row and re-executes for each outer row, making it useful for per-row lookups but expensive " +
+        "at scale — prefer JOINs or CTEs when performance matters.",
+      TypeScript:
+        "An interface is an open declaration that can be extended via declaration merging and is best for describing object shapes " +
+        "and class contracts. A type alias is closed (no merging) but can represent unions, intersections, tuples, and primitive " +
+        "aliases — things an interface cannot express. Use interface for public API shapes and type for complex compositions.",
+    };
+
+    const WEAK_FREE_RESPONSE: Record<string, string> = {
+      React: "React re-renders when something changes. Keys help it know which elements changed.",
+      Python: "Generators use yield, lists use brackets. Generators are lazy.",
+      SQL: "INNER JOIN joins tables. LEFT JOIN keeps left rows. Subqueries are queries inside queries.",
+      TypeScript: "interface and type are mostly the same, interfaces can be extended.",
+    };
+
+    const freeResponseAnswer =
+      mode === "pass"
+        ? (STRONG_FREE_RESPONSE[targetSkill] ??
+           "I have extensive experience with this skill and can explain all core concepts in depth.")
+        : (WEAK_FREE_RESPONSE[targetSkill] ??
+           "I know a little about this but am not sure of the details.");
+
+    const result = await runSkillVerification(
+      targetCandidateId,
+      targetSkill,
+      mcqAnswers,
+      freeResponseAnswer
+    );
+
+    return {
+      success: true,
+      mode,
+      questionsCount: questions.length,
+      freeResponseQuestion: FREE_RESPONSE_QUESTIONS[targetSkill] ?? "N/A",
+      result,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message,
+    };
+  }
+}
+
+export async function testInterviewGenerationAction(candidateId?: string) {
+  try {
+    const targetCandidateId = candidateId || TEST_CANDIDATE_USER_ID;
+    const questions = await generateInterviewQuestions(targetCandidateId);
+    return {
+      success: true,
+      candidateId: targetCandidateId,
+      questions,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message,
+    };
+  }
+}
+
+export async function testInterviewSubmitAction(candidateId: string, mode: "strong" | "weak") {
+  try {
+    const targetCandidateId = candidateId || TEST_CANDIDATE_USER_ID;
+    
+    // First, generate questions to get the questions array
+    const questionObj = await generateInterviewQuestions(targetCandidateId);
+    const questionsList = [
+      ...questionObj.technical_questions,
+      ...questionObj.behavioral_questions
+    ];
+
+    // Sample Answer dictionaries
+    const STRONG_ANSWERS: Record<string, string> = {
+      "Explain the difference between interface and type in TypeScript, and when to use which.":
+        "An interface defines object shapes and supports declaration merging (open for extension). A type alias is closed but can represent primitives, unions, intersections, and mapped types. Interfaces are preferred for public API models, whereas type aliases are best for unions and domain logic compositions.",
+      "Explain how React's reconciliation algorithm decides what to re-render.":
+        "React uses a virtual DOM diffing algorithm with a heuristic O(n) complexity. It identifies elements by type and key. If the element type changes, React destroys the subtree and rebuilds it. For list children, stable and unique keys are used to match previous and next virtual nodes to optimize DOM node reuse and avoid unnecessary re-creation.",
+      "How does Node.js handle asynchronous operations under the hood?":
+        "Node.js runs on a single-threaded event loop powered by the libuv C++ library. While JS execution is single-threaded, libuv delegates blocking IO operations (file read, network) to the operating system's thread pool or asynchronous network kernels. When done, callbacks are pushed to the event loop's task queue to be executed on the main thread.",
+      "Tell me about a time you had to optimize performance in a web application.":
+        "I optimized a Next.js dashboard by implementing code-splitting, lazy loading of charts, and database query pooling. This reduced bundle size by 35% and improved first contentful paint by 1.2s.",
+      "How do you handle conflict or differing opinions within a development team?":
+        "I hold open technical discussions, focus on objective data (benchmarks, complexity, requirements), and align with team standards. If needed, we document alternatives and present to a lead developer for final resolution."
+    };
+
+    const WEAK_ANSWERS: Record<string, string> = {
+      "Explain the difference between interface and type in TypeScript, and when to use which.":
+        "Interface and type are pretty much the same. I just use whatever or standard typescript.",
+      "Explain how React's reconciliation algorithm decides what to re-render.":
+        "React re-renders components whenever state or props change. It compares them and updates the screen.",
+      "How does Node.js handle asynchronous operations under the hood?":
+        "It uses async/await syntax to handle things in the background so it doesn't block the main program.",
+      "Tell me about a time you had to optimize performance in a web application.":
+        "I had to optimize a slow application once by making the code cleaner and removing some loops.",
+      "How do you handle conflict or differing opinions within a development team?":
+        "I just try to agree with whatever the team decides or ask someone else what we should do."
+    };
+
+    const answers: Record<string, string> = {};
+    questionsList.forEach((q) => {
+      const defaultAnswer = mode === "strong"
+        ? "This is a detailed placeholder answer for this custom question to satisfy requirements."
+        : "I don't know.";
+      answers[q] = mode === "strong"
+        ? (STRONG_ANSWERS[q] ?? defaultAnswer)
+        : (WEAK_ANSWERS[q] ?? defaultAnswer);
+    });
+
+    const result = await submitAndEvaluateInterview(targetCandidateId, questionsList, answers);
+    
+    return {
+      success: true,
+      candidateId: targetCandidateId,
+      questions: questionsList,
+      answers,
+      result,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message,
+    };
+  }
+}
+
+export async function testTeamContributionsAction(teamId: string, memberIds: string[]) {
+  try {
+    const result = await calculateTeamContributions(teamId, memberIds);
+    return {
+      success: true,
+      result,
     };
   } catch (err: any) {
     return {

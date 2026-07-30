@@ -79,34 +79,29 @@ export async function searchCandidatesNL(query: string, limit: number = 10): Pro
 
   const { data: dbCandidates, error } = await adminClient
     .from("candidate_profiles")
-    .select("user_id, github_username, talent_profile, talent_score, embedding, github_data");
+    .select("user_id, github_username, talent_profile, talent_score, github_data");
 
-  let candidateProfiles: any[] = dbCandidates || [];
+  if (error) {
+    throw new Error(`Failed to retrieve candidate profiles: ${error.message}`);
+  }
 
-  if (error || !candidateProfiles || candidateProfiles.length === 0) {
-    // Fallback default candidate for testing when DB tables are freshly created
-    candidateProfiles = [
-      {
-        user_id: "0ee73e0e-0529-4480-a16c-15748a277bde",
-        github_username: "shikha-singh",
-        talent_score: { overallScore: 92 },
-        talent_profile: {
-          resume: { title: "Senior Full Stack Engineer", skills: ["React", "Next.js", "TypeScript", "Node.js", "Supabase", "Python"] },
-          github: { repositories: [{ name: "next-ai-recruiter", description: "AI talent scoring & vector matching engine" }] },
-          manual: { hackathons: [{ title: "Global AI Hackathon 2025", award: "1st Place Winner" }] }
-        }
-      },
-      {
-        user_id: "cand-2-alex",
-        github_username: "alexrivera-dev",
-        talent_score: { overallScore: 88 },
-        talent_profile: {
-          resume: { title: "Machine Learning & Full Stack Engineer", skills: ["Python", "PyTorch", "FastAPI", "React", "Docker", "ML"] },
-          github: { repositories: [{ name: "mini-llm-embeddings", description: "Local feature extraction transformer pipelines" }] },
-          manual: { hackathons: [{ title: "ML Innovation Summit", award: "Best AI Solution" }] }
-        }
-      }
-    ];
+  const candidateProfiles = dbCandidates || [];
+
+  // Fetch embeddings from candidate_embeddings table
+  const { data: dbEmbeds, error: embedError } = await adminClient
+    .from("candidate_embeddings")
+    .select("candidate_id, embedding")
+    .order("created_at", { ascending: true }); // older first, so newer overwrites in map
+
+  if (embedError) {
+    throw new Error(`Failed to retrieve candidate embeddings: ${embedError.message}`);
+  }
+
+  const embeddingMap = new Map<string, number[]>();
+  if (dbEmbeds) {
+    for (const row of dbEmbeds) {
+      embeddingMap.set(row.candidate_id, row.embedding);
+    }
   }
 
   // 4. Deterministic Filtering & Similarity Scoring
@@ -163,7 +158,7 @@ export async function searchCandidatesNL(query: string, limit: number = 10): Pro
     }
 
     // Calculate Vector Cosine Similarity Score
-    let candVector = cand.embedding;
+    let candVector = embeddingMap.get(cand.user_id) || null;
     if (!candVector) {
       try {
         const genRes = await generateCandidateEmbedding(cand.user_id);

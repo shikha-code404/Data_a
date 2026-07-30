@@ -37,83 +37,71 @@ export interface CandidateJobMatchResult {
 export async function matchCandidateToJob(candidateId: string, jobId: string): Promise<CandidateJobMatchResult> {
   const adminClient = getSupabaseAdmin();
 
-  // 1. Retrieve Candidate Profile & Embedding
-  const { data: dbProfile } = await adminClient
+  // 1. Retrieve Candidate Profile
+  const { data: profile, error: profileError } = await adminClient
     .from("candidate_profiles")
-    .select("user_id, github_username, talent_profile, talent_score, embedding")
+    .select("user_id, github_username, talent_profile, talent_score")
     .eq("user_id", candidateId)
     .maybeSingle();
 
-  let profile: any = dbProfile;
-
+  if (profileError) {
+    throw new Error(`Error retrieving candidate profile for ID ${candidateId}: ${profileError.message}`);
+  }
   if (!profile) {
-    profile = {
-      user_id: candidateId,
-      github_username: "shikha-singh",
-      talent_profile: {
-        resume: { title: "Senior Full Stack Engineer", skills: ["React", "Next.js", "TypeScript", "Node.js", "Supabase", "Python"] },
-        github: { repositories: [{ name: "next-ai-recruiter", description: "AI talent scoring engine" }] },
-        manual: { hackathons: [{ title: "Global AI Hackathon 2025", award: "1st Place Winner" }] }
-      },
-      talent_score: { overallScore: 92 },
-      embedding: null,
-    };
+    throw new Error(`Candidate profile not found for ID: ${candidateId}`);
   }
 
-  // Retrieve candidate vector embedding from candidate_embeddings table or profile
-  let candVector: number[] | null = profile.embedding;
-  if (!candVector) {
-    const { data: embedRow } = await adminClient
-      .from("candidate_embeddings")
-      .select("embedding")
-      .eq("candidate_id", candidateId)
-      .order("created_at", { ascending: false })
-      .maybeSingle();
+  // Retrieve candidate vector embedding from candidate_embeddings table
+  let candVector: number[] | null = null;
+  const { data: embedRow, error: embedError } = await adminClient
+    .from("candidate_embeddings")
+    .select("embedding")
+    .eq("candidate_id", candidateId)
+    .order("created_at", { ascending: false })
+    .maybeSingle();
 
-    if (embedRow && embedRow.embedding) {
-      candVector = embedRow.embedding;
-    } else {
-      const genResult = await generateCandidateEmbedding(candidateId);
-      candVector = genResult.embedding;
-    }
+  if (embedError) {
+    throw new Error(`Error retrieving candidate embedding for ID ${candidateId}: ${embedError.message}`);
   }
 
-  // 2. Retrieve Job Posting & Embedding
-  const { data: dbJob } = await adminClient
+  if (embedRow && embedRow.embedding) {
+    candVector = embedRow.embedding;
+  } else {
+    const genResult = await generateCandidateEmbedding(candidateId);
+    candVector = genResult.embedding;
+  }
+
+  // 2. Retrieve Job Posting
+  const { data: job, error: jobError } = await adminClient
     .from("job_postings")
-    .select("*")
+    .select("id, title, company, description, skills_required, min_experience_years")
     .eq("id", jobId)
     .maybeSingle();
 
-  let job: any = dbJob;
-
+  if (jobError) {
+    throw new Error(`Error retrieving job posting for ID ${jobId}: ${jobError.message}`);
+  }
   if (!job) {
-    job = {
-      id: jobId,
-      title: "Senior Full Stack AI Developer",
-      company: "HireSpark Partner",
-      description: "Build intelligent candidate matching applications with Next.js App Router, Supabase vector embeddings, and TypeScript.",
-      skills_required: ["React", "Next.js", "TypeScript", "Supabase"],
-      min_experience_years: 3,
-      embedding: null,
-    };
+    throw new Error(`Job posting not found for ID: ${jobId}`);
   }
 
-  let jobVector: number[] | null = job.embedding;
-  if (!jobVector) {
-    const { data: embedRow } = await adminClient
-      .from("job_embeddings")
-      .select("embedding")
-      .eq("job_id", jobId)
-      .order("created_at", { ascending: false })
-      .maybeSingle();
+  let jobVector: number[] | null = null;
+  const { data: jobEmbedRow, error: jobEmbedError } = await adminClient
+    .from("job_embeddings")
+    .select("embedding")
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false })
+    .maybeSingle();
 
-    if (embedRow && embedRow.embedding) {
-      jobVector = embedRow.embedding;
-    } else {
-      const genResult = await generateJobEmbedding(jobId);
-      jobVector = genResult.embedding;
-    }
+  if (jobEmbedError) {
+    throw new Error(`Error retrieving job embedding for ID ${jobId}: ${jobEmbedError.message}`);
+  }
+
+  if (jobEmbedRow && jobEmbedRow.embedding) {
+    jobVector = jobEmbedRow.embedding;
+  } else {
+    const genResult = await generateJobEmbedding(jobId);
+    jobVector = genResult.embedding;
   }
 
   // ==========================================

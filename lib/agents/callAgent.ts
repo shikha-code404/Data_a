@@ -64,7 +64,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
   let responseObj: any = null;
   let source = "";
 
-  // 2. Try Ollama (Local qwen2.5:7b-instruct)
+  // 2. Try Ollama (Local qwen3.5:9b)
   const ollamaHost = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
   console.log(`[Ollama Request] agentType: ${agentType}, host: ${ollamaHost}`);
 
@@ -78,7 +78,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "qwen2.5:7b-instruct",
+        model: "qwen3.5:9b",
         messages: [
           {
             role: "system",
@@ -116,10 +116,10 @@ export async function callAgent(agentType: string, input: object): Promise<objec
   } catch (ollamaErr: any) {
     console.warn(`Ollama failed or timed out: ${ollamaErr.message}. Falling back to Hugging Face.`);
 
-    // 3. Fallback to Hugging Face Qwen2.5-7B-Instruct
+    // 3. Fallback to Hugging Face Qwen3.5-9B
     try {
       const apiKey = process.env.HF_API_KEY;
-      const modelId = process.env.HF_MODEL_ID || "Qwen/Qwen2.5-7B-Instruct";
+      const modelId = process.env.HF_MODEL_ID || "Qwen/Qwen3.5-9B";
       
       console.log(`[HF Request] modelId: ${modelId}`);
       if (!apiKey || apiKey.includes("placeholder")) {
@@ -199,11 +199,107 @@ export async function callAgent(agentType: string, input: object): Promise<objec
           skills: extractedSkills,
         };
         source = "local_resume_parser";
+      } else if (agentType === "interview_question_generator") {
+        responseObj = {
+          technical_questions: [
+            "Explain the difference between interface and type in TypeScript, and when to use which.",
+            "Explain how React's reconciliation algorithm decides what to re-render.",
+            "How does Node.js handle asynchronous operations under the hood?"
+          ],
+          behavioral_questions: [
+            "Tell me about a time you had to optimize performance in a web application.",
+            "How do you handle conflict or differing opinions within a development team?"
+          ]
+        };
+        source = "local_interview_question_generator";
+      } else if (agentType === "interview_evaluator") {
+        const answers = (input as any).answers || {};
+        const answerTexts = Object.values(answers).map(v => String(v).trim());
+        
+        let techScore = 40;
+        let strengths = [];
+        let concerns = [];
+        
+        // Evaluate based on keyword presence strictly in the candidate's answers
+        const answersStr = JSON.stringify(answers).toLowerCase();
+        
+        // 1. TS check
+        if (answersStr.includes("merging") || answersStr.includes("union") || answersStr.includes("intersection")) {
+          techScore += 20;
+          strengths.push("Understand TypeScript differences between interface and type (declaration merging/union types).");
+        } else {
+          concerns.push("Vague or missing explanation of TypeScript interface and type distinctions.");
+        }
+        
+        // 2. React check
+        if (answersStr.includes("reconciliation") || answersStr.includes("diff") || answersStr.includes("virtual dom")) {
+          techScore += 20;
+          strengths.push("Understand React's reconciliation and re-rendering logic.");
+        } else {
+          concerns.push("Weak understanding of React rendering mechanics.");
+        }
+        
+        // 3. Node check
+        if (answersStr.includes("event loop") || answersStr.includes("libuv") || answersStr.includes("thread pool")) {
+          techScore += 20;
+          strengths.push("Demonstrated clear understanding of Node.js event-driven runtime.");
+        } else {
+          concerns.push("Did not explain Node.js asynchronous architecture.");
+        }
+
+        // Substance analysis: Check word counts per answer
+        let hasShortAnswer = false;
+        let totalWords = 0;
+        
+        for (const ans of answerTexts) {
+          const words = ans.split(/\s+/).filter(w => w.length > 0);
+          totalWords += words.length;
+          if (words.length < 15) {
+            hasShortAnswer = true;
+          }
+        }
+        
+        // Capping rule: an answer under 15 words should never score above 40
+        if (hasShortAnswer || totalWords < 50) {
+          techScore = Math.min(techScore, 40);
+          concerns.push("One or more answers were too brief (under 15 words) to demonstrate technical depth.");
+        } else {
+          // Substance bonus for highly detailed responses
+          if (totalWords > 150) {
+            techScore = Math.min(100, techScore + 10);
+          }
+        }
+        
+        let recommendation = 'maybe';
+        if (techScore >= 80) recommendation = 'strong_yes';
+        else if (techScore >= 65) recommendation = 'yes';
+        else if (techScore >= 45) recommendation = 'maybe';
+        else recommendation = 'no';
+        
+        responseObj = {
+          confidence_score: Math.min(100, Math.max(0, techScore + 5)),
+          technical_rating: techScore,
+          communication_rating: (hasShortAnswer || totalWords < 50) ? 40 : 85,
+          hiring_recommendation: recommendation,
+          strengths: strengths.length > 0 ? strengths : ["Responsive communication style."],
+          concerns: concerns.length > 0 ? concerns : ["No major concerns detected."],
+          summary: `Candidate has completed the interview. Technical rating is ${techScore}%. ${
+            hasShortAnswer ? "Evaluation capped at 40 due to insufficient substance in one or more answers." : "Demonstrated key technical strengths."
+          }`,
+          evaluation_method: "local_fallback"
+        };
+        source = "local_interview_evaluator";
+      } else if (agentType === "team_contribution_summary") {
+        responseObj = {
+          summary: "The team shows stable overall progress with contributions distributed across members. A clear primary developer drives the main feature development, with auxiliary members handling support functions."
+        };
+        source = "local_team_contribution_summary";
       } else {
         throw new Error(`All model paths failed. Ollama error: ${ollamaErr.message}. Hugging Face error: ${hfErr.message}`);
       }
     }
   }
+
 
   // 4. On success, write result to agent_responses cache
   try {

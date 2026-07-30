@@ -125,22 +125,14 @@ export async function generateCandidateEmbedding(candidateId: string) {
     .eq("user_id", candidateId)
     .maybeSingle();
 
-  let profile: any = dbProfile;
-
-  if (error || !profile) {
-    profile = {
-      user_id: candidateId,
-      github_username: "shikha-singh",
-      talent_profile: {
-        resume: { title: "Senior Full Stack Engineer", skills: ["React", "Next.js", "TypeScript", "Node.js", "Supabase", "Python"] },
-        github: { repositories: [{ name: "next-ai-recruiter", description: "AI talent scoring engine" }] },
-        manual: { hackathons: [{ title: "Global AI Hackathon 2025", award: "1st Place Winner" }] }
-      },
-      talent_score: { overallScore: 92 }
-    };
+  if (error) {
+    throw new Error(`Error retrieving candidate profile for ID ${candidateId}: ${error.message}`);
+  }
+  if (!dbProfile) {
+    throw new Error(`Candidate profile not found for ID: ${candidateId}`);
   }
 
-  const embeddingInputText = buildCandidateEmbeddingInput(profile.talent_profile, profile.talent_score);
+  const embeddingInputText = buildCandidateEmbeddingInput(dbProfile.talent_profile, dbProfile.talent_score);
   const embeddingVector = await generateTextEmbedding(embeddingInputText);
 
   // Store in candidate_embeddings table
@@ -155,21 +147,7 @@ export async function generateCandidateEmbedding(candidateId: string) {
     .single();
 
   if (dbError) {
-    console.error("Failed to insert candidate_embeddings row:", dbError);
-    // Also update candidate_profiles table for backwards compatibility
-    await adminClient
-      .from("candidate_profiles")
-      .update({ embedding: embeddingVector, embedding_text: embeddingInputText })
-      .eq("user_id", candidateId);
-
-    return {
-      success: true,
-      candidateId,
-      embedding: embeddingVector,
-      embeddingLength: embeddingVector.length,
-      embeddingInputTextSnippet: embeddingInputText.slice(0, 300),
-      vectorSample: embeddingVector.slice(0, 5),
-    };
+    throw new Error(`Failed to insert candidate embedding: ${dbError.message}`);
   }
 
   return {
@@ -195,21 +173,14 @@ export async function generateJobEmbedding(jobId: string) {
     .eq("id", jobId)
     .maybeSingle();
 
-  let job = dbJob;
-
-  if (error || !job) {
-    job = {
-      id: jobId,
-      title: "Senior AI & Full Stack Engineer",
-      company: "HireSpark Partner",
-      description: "Building next-generation vector search applications with Next.js and Supabase.",
-      skills_required: ["React", "Next.js", "TypeScript", "Supabase"],
-      min_experience_years: 3,
-      location: "Remote",
-    };
+  if (error) {
+    throw new Error(`Error retrieving job posting for ID ${jobId}: ${error.message}`);
+  }
+  if (!dbJob) {
+    throw new Error(`Job posting not found for ID: ${jobId}`);
   }
 
-  const embeddingInputText = buildJobEmbeddingInput(job);
+  const embeddingInputText = buildJobEmbeddingInput(dbJob);
   const embeddingVector = await generateTextEmbedding(embeddingInputText);
 
   // Store in job_embeddings table
@@ -224,20 +195,7 @@ export async function generateJobEmbedding(jobId: string) {
     .single();
 
   if (dbError) {
-    console.error("Failed to insert job_embeddings row:", dbError);
-    await adminClient
-      .from("job_postings")
-      .update({ embedding: embeddingVector, embedding_text: embeddingInputText })
-      .eq("id", jobId);
-
-    return {
-      success: true,
-      jobId,
-      embedding: embeddingVector,
-      embeddingLength: embeddingVector.length,
-      embeddingInputTextSnippet: embeddingInputText.slice(0, 300),
-      vectorSample: embeddingVector.slice(0, 5),
-    };
+    throw new Error(`Failed to insert job embedding: ${dbError.message}`);
   }
 
   return {
