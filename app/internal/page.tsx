@@ -21,9 +21,44 @@ import {
   testPitchDeckAnalysisPreset,
   testFraudDetectionAction,
   testAuthenticityScoreAction,
+  testCareerGuidanceAction,
+  testResumeBuilderAction,
+  seedHackathonTestData,
+  testHackathonRankingAction,
+  fetchHackathonLeaderboardAction,
 } from "./actions";
 
 const AGENT_PRESETS = [
+  {
+    type: "hackathon_rank",
+    label: "🚀 Phase 5: Hackathon Ranking & Leaderboard",
+    defaultPayload: {
+      hackathonId: "Click 'Seed Test Hackathon' below to generate one"
+    }
+  },
+  {
+    type: "resume_builder_modern",
+    label: "🚀 Phase 5: Resume Builder — Modern Template",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde",
+      template: "Modern"
+    }
+  },
+  {
+    type: "resume_builder_minimal",
+    label: "🚀 Phase 5: Resume Builder — Minimal Template",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde",
+      template: "Minimal"
+    }
+  },
+  {
+    type: "career_guidance",
+    label: "🚀 Phase 5: AI Career Guidance System",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde",
+    }
+  },
   {
     type: "authenticity_score",
     label: "🚀 Phase 4: Authenticity Score & Fraud Report",
@@ -453,6 +488,45 @@ export default function DebugRoute() {
         } else {
           setErrorMsg(res.error || "Authenticity Score check failed.");
         }
+      } else if (agentType === "career_guidance") {
+        const payload = JSON.parse(payloadText);
+        const res = await testCareerGuidanceAction(payload.candidateId);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.result,
+            cachedRows: res.cachedRows
+          });
+        } else {
+          setErrorMsg(res.error || "Career Guidance failed.");
+        }
+      } else if (agentType === "resume_builder_modern" || agentType === "resume_builder_minimal") {
+        const payload = JSON.parse(payloadText);
+        const template = agentType === "resume_builder_minimal" ? "Minimal" : "Modern";
+        const res = await testResumeBuilderAction(payload.candidateId, template);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.result,
+            cachedRows: res.cachedRows,
+            downloadUrl: `/api/resume/${res.result.resume_id}/download`
+          });
+        } else {
+          setErrorMsg(res.error || "Resume Generation failed.");
+        }
+      } else if (agentType === "hackathon_rank") {
+        const payload = JSON.parse(payloadText);
+        const res = await testHackathonRankingAction(payload.hackathonId);
+        setIsLoading(false);
+        if (res.success) {
+          const boardRes = await fetchHackathonLeaderboardAction(payload.hackathonId);
+          setResult({
+            response: res.ranked_teams,
+            leaderboard: boardRes.success ? boardRes.leaderboard : []
+          });
+        } else {
+          setErrorMsg(res.error || "Hackathon ranking failed.");
+        }
       } else {
         if (agentType === "custom" && !customAgentType.trim()) {
           setErrorMsg("Please specify a custom agent type.");
@@ -559,6 +633,29 @@ export default function DebugRoute() {
               </div>
             )}
 
+            {agentType === "hackathon_rank" && (
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsLoading(true);
+                    setErrorMsg(null);
+                    const res = await seedHackathonTestData();
+                    setIsLoading(false);
+                    if (res.success) {
+                      setPayloadText(JSON.stringify({ hackathonId: res.hackathon_id }, null, 2));
+                      alert(`Successfully seeded test hackathon: ${res.hackathon_name}\nID: ${res.hackathon_id}\n\nThe payload has been updated with the seeded ID!`);
+                    } else {
+                      setErrorMsg(res.error || "Failed to seed hackathon test data.");
+                    }
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 px-4 rounded-lg transition text-center cursor-pointer mb-2"
+                >
+                  🌱 Seed Test Hackathon & Set Payload ID
+                </button>
+              </div>
+            )}
+
             {agentType === "resume_upload" || agentType === "pitch_deck_analyzer_upload" ? (
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold text-slate-300">
@@ -618,7 +715,19 @@ export default function DebugRoute() {
         <section className="lg:col-span-7 flex flex-col gap-6">
           {/* Card 1: Raw Output */}
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl flex-1 flex flex-col">
-            <h2 className="text-lg font-bold text-slate-200">2. Agent Structured JSON Response</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold text-slate-200">2. Agent Structured JSON Response</h2>
+              {result && result.downloadUrl && (
+                <a
+                  href={result.downloadUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-1.5"
+                >
+                  📄 View & Print PDF
+                </a>
+              )}
+            </div>
             <div className="mt-4 bg-slate-950 border border-slate-900 rounded-xl p-4 font-mono text-xs flex-1 min-h-[250px] overflow-auto max-h-[450px]">
               {result ? (
                 <pre className="text-green-400 whitespace-pre-wrap leading-relaxed">
@@ -683,6 +792,65 @@ export default function DebugRoute() {
               )}
             </div>
           </div>
+
+          {/* Card 3: Leaderboard (Recruiter Top-Performer View) */}
+          {result && result.leaderboard && (
+            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col gap-4">
+              <h2 className="text-lg font-bold text-slate-200">🏆 Recruiter Leaderboard & Scout Drill-down</h2>
+              <div className="flex flex-col gap-4">
+                {result.leaderboard.map((team: any) => (
+                  <div key={team.team_id} className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex flex-col gap-3">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 font-bold px-2 py-0.5 rounded text-xs">
+                          Rank #{team.rank}
+                        </span>
+                        <h3 className="font-bold text-slate-200 text-sm">{team.team_name}</h3>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs font-semibold text-emerald-400">
+                          Composite Score: {team.composite_score.toFixed(1)}
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          Pitch: {team.pitch_score} | Dominance: {team.dominance_flag ? `${team.dominance_percentage}% (Penalty applied)` : "None"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-800/80 pt-2">
+                      <h4 className="text-[10px] uppercase font-bold text-slate-500 mb-1.5">Team Members (Scout Drill-down)</h4>
+                      <div className="flex flex-col gap-2">
+                        {team.members && team.members.length > 0 ? (
+                          team.members.map((member: any) => (
+                            <div key={member.candidate_id} className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/40 flex justify-between items-start">
+                              <div>
+                                <p className="text-xs font-bold text-slate-200">{member.full_name}</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5">{member.headline || "Developer"}</p>
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                  {member.skills.map((skill: string) => (
+                                    <span key={skill} className="text-[8px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">
+                                      {skill}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="bg-purple-600/20 border border-purple-500/20 text-purple-300 font-extrabold px-2 py-0.5 rounded text-[10px]">
+                                  Talent Score: {member.talent_score}%
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs text-slate-600 italic">No members in database</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
       </main>
     </div>

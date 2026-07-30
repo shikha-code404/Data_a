@@ -390,6 +390,146 @@ export async function callAgent(agentType: string, input: object): Promise<objec
           evaluation_method: "local_fallback"
         };
         source = "local_originality_analyzer";
+      } else if (agentType === "career_guidance") {
+        const talentProfile = (input as any).talent_profile || {};
+        const resume = talentProfile.resume || {};
+        const candidateSkills: string[] = Array.isArray(resume.skills) ? resume.skills : [];
+        const scoreObj = (input as any).talent_score || {};
+        const overallScore = typeof scoreObj.overallScore === "number" ? scoreObj.overallScore : 50;
+
+        const isBackend = candidateSkills.some(s => /node|python|django|fastapi|postgres/i.test(s)) && !candidateSkills.some(s => /react|next\.js/i.test(s));
+        const isFullstackOrFrontend = candidateSkills.some(s => /react|next\.js|typescript/i.test(s));
+
+        const gaps = [];
+        if (isFullstackOrFrontend) {
+          if (!candidateSkills.some(s => /docker|aws/i.test(s))) {
+            gaps.push({
+              skill: "Cloud Deployment & DevOps",
+              current_level: "Beginner",
+              target_level: "Intermediate",
+              why: "Candidate has strong fullstack/frontend skills but lacks explicit cloud or containerization experience in their profile."
+            });
+          } else {
+            gaps.push({
+              skill: "Advanced System Architecture",
+              current_level: "Intermediate",
+              target_level: "Advanced",
+              why: "Recommended for fullstack developers looking to transition to leadership roles."
+            });
+          }
+        } else if (isBackend) {
+          gaps.push({
+            skill: "Asynchronous Python & Distributed Queues",
+            current_level: "Intermediate",
+            target_level: "Advanced",
+            why: "Candidate works with Python/FastAPI but lacks production scale queues (e.g. Celery/Redis) in their profile."
+          });
+        }
+
+        if (gaps.length === 0) {
+          gaps.push({
+            skill: "System Design & Architecture",
+            current_level: "Intermediate",
+            target_level: "Advanced",
+            why: "To progress to a senior level, candidate should focus on designing scalable distributed systems."
+          });
+        }
+
+        const certs = [];
+        if (!candidateSkills.some(s => /aws/i.test(s))) {
+          certs.push({
+            name: "AWS Certified Developer - Associate",
+            provider: "Amazon Web Services",
+            reason: "Validates cloud deployment capabilities, bridging candidate's cloud engineering gap."
+          });
+        } else {
+          certs.push({
+            name: "AWS Certified Solutions Architect - Professional",
+            provider: "Amazon Web Services",
+            reason: "Advanced certification matching candidate's existing AWS and architecture background."
+          });
+        }
+
+        responseObj = {
+          skill_gaps: gaps,
+          recommended_certifications: certs,
+          career_roadmap: [
+            {
+              stage: "Skill Deepening & Gaps",
+              timeframe: "1-3 months",
+              milestones: [
+                `Address the identified gap in ${gaps[0]?.skill || "advanced system design"}.`,
+                "Earn core engineering skill badges in Hirespark."
+              ]
+            },
+            {
+              stage: "Professional Certification",
+              timeframe: "3-6 months",
+              milestones: [
+                `Prepare for and obtain ${certs[0]?.name || "AWS Developer Certification"}.`,
+                "Build and deploy a public portfolio showcasing these technologies."
+              ]
+            }
+          ],
+          reasoning: `Based on a talent score of ${overallScore}% and current stack, the candidate is well-positioned to step up to cloud-native development.`,
+          evaluation_method: "local_fallback"
+        };
+        source = "local_career_guidance";
+      } else if (agentType === "resume_builder") {
+        const talentProfile = (input as any).talent_profile || {};
+        const resume = talentProfile.resume || {};
+        const github = talentProfile.github || {};
+        const manual = talentProfile.manual || {};
+        
+        const candidateName = resume.name || talentProfile.name || "Candidate User";
+        const email = resume.email || talentProfile.email || "candidate@hirespark.com";
+        const phone = resume.phone || talentProfile.phone || "+1 (555) 019-2834";
+        const location = resume.location || talentProfile.location || "San Francisco, CA";
+        
+        const experience = Array.isArray(resume.experience) ? resume.experience : [];
+        const education = Array.isArray(resume.education) ? resume.education : [];
+        const projects = Array.isArray(resume.projects) ? resume.projects : [];
+        const skills = Array.isArray(resume.skills) ? resume.skills : [];
+        const certifications = Array.isArray(resume.certifications) ? resume.certifications : [];
+        
+        responseObj = {
+          name: candidateName,
+          contact: {
+            email,
+            phone,
+            location,
+            github: talentProfile.github_username || null
+          },
+          summary: `Results-driven software professional specializing in ${skills.slice(0, 3).join(", ") || "software engineering"}. Proven track record of delivering high-quality web services and products.`,
+          experience: experience.map((exp: any) => ({
+            company: exp.company || "Company",
+            role: exp.role || "Developer",
+            start_date: String(exp.start_date || exp.start_year || "Unknown"),
+            end_date: exp.end_date ? String(exp.end_date) : null,
+            description: exp.description || "Contributed to core application development."
+          })),
+          education: education.map((edu: any) => ({
+            institution: edu.institution || "University",
+            degree: edu.degree || "Degree",
+            field: edu.field || "Computer Science",
+            start_year: typeof edu.start_year === "number" ? edu.start_year : null,
+            end_year: typeof edu.end_year === "number" ? edu.end_year : null,
+            gpa: edu.gpa ? String(edu.gpa) : null
+          })),
+          projects: projects.map((proj: any) => ({
+            name: proj.name || "Software Project",
+            description: proj.description || "Designed and built full-stack solutions.",
+            technologies: Array.isArray(proj.technologies) ? proj.technologies : []
+          })),
+          skills: skills,
+          certifications: certifications.map((c: any) => ({
+            name: c.name || "Certification",
+            issuer: c.issuer || "Authority",
+            year: typeof c.year === "number" ? c.year : null
+          })),
+          evaluation_method: "local_fallback"
+        };
+        source = "local_resume_builder";
       } else {
         throw new Error(`All model paths failed. Ollama error: ${ollamaErr.message}. Hugging Face error: ${hfErr.message}`);
       }

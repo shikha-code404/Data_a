@@ -17,6 +17,9 @@ import {
 } from "@/lib/verification/engine";
 import { generateInterviewQuestions, submitAndEvaluateInterview } from "@/lib/interview/engine";
 import { calculateTeamContributions } from "@/lib/analytics/team";
+import { generateCareerGuidance } from "@/lib/profile/career";
+import { buildCandidateResume } from "@/lib/resume/resumeService";
+import { calculateHackathonRankings, getHackathonLeaderboard } from "@/lib/hackathon/leaderboard";
 
 
 // Preset default candidate ID in database for testing
@@ -751,4 +754,247 @@ export async function testAuthenticityScoreAction(candidateId: string) {
     };
   }
 }
+
+export async function testCareerGuidanceAction(candidateId: string) {
+  try {
+    if (!candidateId) {
+      throw new Error("Candidate ID is required.");
+    }
+    const result = await generateCareerGuidance(candidateId, true);
+    
+    // Fetch cached rows from agent_responses table for career_guidance
+    const adminClient = getSupabaseAdmin();
+    const { data: cachedRows } = await adminClient
+      .from("agent_responses")
+      .select("*")
+      .eq("agent_type", "career_guidance")
+      .order("created_at", { ascending: false });
+      
+    return {
+      success: true,
+      result,
+      cachedRows: (cachedRows || []).map(row => ({
+        id: row.id,
+        created_at: row.created_at,
+        input_hash: row.input_hash,
+        input_payload: row.input_payload,
+        response: row.response
+      }))
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+}
+
+export async function testResumeBuilderAction(candidateId: string, templateName: string) {
+  try {
+    if (!candidateId) {
+      throw new Error("Candidate ID is required.");
+    }
+    const result = await buildCandidateResume(candidateId, templateName, true);
+    
+    // Fetch cached rows from resumes table for this candidate
+    const adminClient = getSupabaseAdmin();
+    const { data: cachedRows } = await adminClient
+      .from("resumes")
+      .select("*")
+      .eq("candidate_id", candidateId)
+      .order("created_at", { ascending: false });
+      
+    return {
+      success: true,
+      result,
+      cachedRows: (cachedRows || []).map(row => ({
+        id: row.id,
+        candidate_id: row.candidate_id,
+        template_name: row.template_name,
+        resume_json: row.resume_json,
+        needs_review: row.needs_review,
+        created_at: row.created_at
+      }))
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+}
+
+export async function seedHackathonTestData() {
+  try {
+    const adminClient = getSupabaseAdmin();
+
+    // 1. Clear old test hackathons to avoid duplicates
+    const { data: oldHacks } = await adminClient
+      .from("hackathons")
+      .select("id")
+      .ilike("name", "%Test Hackathon%");
+
+    if (oldHacks && oldHacks.length > 0) {
+      const oldIds = oldHacks.map(h => h.id);
+      await adminClient.from("hackathons").delete().in("id", oldIds);
+    }
+
+    // 2. Insert test hackathon
+    const { data: hackathon, error: hackErr } = await adminClient
+      .from("hackathons")
+      .insert({
+        name: "DevMind Test Hackathon",
+        date: new Date().toISOString().split("T")[0],
+        description: "A sandbox hackathon designed for testing team rankings and leaderboard drill-downs."
+      })
+      .select()
+      .single();
+
+    if (hackErr || !hackathon) {
+      throw new Error(`Failed to create test hackathon: ${hackErr?.message}`);
+    }
+
+    // 3. Create three test teams
+    // Team A: Balanced Team
+    const { data: teamA, error: teamAErr } = await adminClient
+      .from("hackathon_teams")
+      .insert({
+        hackathon_id: hackathon.id,
+        team_name: "Alpha balanced Team",
+        project_repo: "https://github.com/test/alpha",
+        innovation_score: 85
+      })
+      .select()
+      .single();
+
+    // Team B: Dominant Contributor Team (penalty applies)
+    const { data: teamB, error: teamBErr } = await adminClient
+      .from("hackathon_teams")
+      .insert({
+        hackathon_id: hackathon.id,
+        team_name: "Beta Dominant Team",
+        project_repo: "https://github.com/test/beta",
+        innovation_score: 90
+      })
+      .select()
+      .single();
+
+    // Team C: Missing Data Team (should throw error during ranking)
+    const { data: teamC, error: teamCErr } = await adminClient
+      .from("hackathon_teams")
+      .insert({
+        hackathon_id: hackathon.id,
+        team_name: "Gamma Missing-Data Team",
+        project_repo: "https://github.com/test/gamma",
+        innovation_score: 70
+      })
+      .select()
+      .single();
+
+    if (teamAErr || teamBErr || teamCErr || !teamA || !teamB || !teamC) {
+      throw new Error("Failed to create test teams.");
+    }
+
+    // 4. Map candidates to teams
+    const { data: candidates } = await adminClient
+      .from("candidate_profiles")
+      .select("id, user_id");
+
+    const candA = candidates?.find(c => c.user_id === "0ee73e0e-0529-4480-a16c-15748a277bde")?.id;
+    const candB = candidates?.find(c => c.user_id === "1ee73e0e-0529-4480-a16c-15748a277bdf")?.id;
+    const candC = candidates?.find(c => c.user_id === "2ee73e0e-0529-4480-a16c-15748a277be0")?.id;
+
+    if (!candA || !candB || !candC) {
+      throw new Error("Could not locate candidates in candidate_profiles to seed hackathon members.");
+    }
+
+    const { error: membersErr } = await adminClient.from("hackathon_members").insert([
+      { team_id: teamA.id, candidate_id: candA },
+      { team_id: teamA.id, candidate_id: candB },
+      { team_id: teamB.id, candidate_id: candC },
+      { team_id: teamC.id, candidate_id: candA }
+    ]);
+
+    if (membersErr) {
+      throw new Error(`Failed to insert hackathon members: ${membersErr.message}`);
+    }
+
+    // 5. Seed Pitch Analysis and Contributions
+    // Team A: Pitch Score = 88. No Dominance.
+    await adminClient.from("pitch_analyses").insert({
+      team_id_or_candidate_id: teamA.id,
+      ppt_url: "https://example.com/alpha.pptx",
+      scores: { overall_pitch_score: 88, innovation: 85, usability: 90 },
+      summary: "Excellent balanced pitch.",
+      improvement_suggestions: ["Add more charts"],
+      evaluation_method: "local_fallback"
+    });
+
+    await adminClient.from("team_contributions").insert({
+      team_id: teamA.id,
+      member_breakdown: {
+        members: [],
+        summary: {
+          total_commits: 100,
+          dominance: { flag: false, percentage: 45, member_username: "alexrivera-dev" }
+        }
+      }
+    });
+
+    // Team B: Pitch Score = 92. High Dominance (90% dominance by dev-c).
+    await adminClient.from("pitch_analyses").insert({
+      team_id_or_candidate_id: teamB.id,
+      ppt_url: "https://example.com/beta.pptx",
+      scores: { overall_pitch_score: 92, innovation: 95, usability: 89 },
+      summary: "Outstanding tech demo.",
+      improvement_suggestions: ["Distribute workload"],
+      evaluation_method: "local_fallback"
+    });
+
+    await adminClient.from("team_contributions").insert({
+      team_id: teamB.id,
+      member_breakdown: {
+        members: [],
+        summary: {
+          total_commits: 150,
+          dominance: { flag: true, percentage: 90, member_username: "dev-c" }
+        }
+      }
+    });
+
+    // Team C: Leave empty of pitch_analyses and team_contributions to verify error handling
+
+    return {
+      success: true,
+      hackathon_id: hackathon.id,
+      hackathon_name: hackathon.name,
+      teamA: { id: teamA.id, name: teamA.team_name },
+      teamB: { id: teamB.id, name: teamB.team_name },
+      teamC: { id: teamC.id, name: teamC.team_name }
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function testHackathonRankingAction(hackathonId: string) {
+  try {
+    const results = await calculateHackathonRankings(hackathonId);
+    return { success: true, ranked_teams: results };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function fetchHackathonLeaderboardAction(hackathonId: string) {
+  try {
+    const leaderboard = await getHackathonLeaderboard(hackathonId);
+    return { success: true, leaderboard };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+
+
 
