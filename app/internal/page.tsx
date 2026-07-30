@@ -17,9 +17,60 @@ import {
   testInterviewGenerationAction,
   testInterviewSubmitAction,
   testTeamContributionsAction,
+  testPitchDeckAnalysis,
+  testPitchDeckAnalysisPreset,
+  testFraudDetectionAction,
+  testAuthenticityScoreAction,
 } from "./actions";
 
 const AGENT_PRESETS = [
+  {
+    type: "authenticity_score",
+    label: "🚀 Phase 4: Authenticity Score & Fraud Report",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde",
+    }
+  },
+  {
+    type: "fraud_detection_check",
+    label: "🚀 Phase 4: Fraud Detection Check",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde",
+    }
+  },
+  {
+    type: "pitch_deck_analyzer_thin",
+    label: "🚀 Phase 4: Pitch Deck — Thin Deck",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde",
+      slidesText: [
+        "Slide 1: SmartRecruit project",
+        "Slide 2: We use React to build interfaces.",
+        "Slide 3: That is all. Simple resume parser."
+      ]
+    }
+  },
+  {
+    type: "pitch_deck_analyzer_detailed",
+    label: "🚀 Phase 4: Pitch Deck — Detailed Deck",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde",
+      slidesText: [
+        "Slide 1: SmartRecruit - AI-driven Enterprise Talent Acquisition System",
+        "Slide 2: Problem & Solution. Traditional recruiting is slow. SmartRecruit uses a robust pipeline. We ingest GitHub repositories and parse developer portfolios using NLP models, generating a vector space embedding for matching.",
+        "Slide 3: Technology Stack & Core Architecture. Built using Next.js App Router, TypeScript, and Supabase Postgres. Vector similarities are calculated in pgvector with cosine similarity. LLMs are integrated via the CallAgent abstraction, utilizing Ollama's qwen3.5:9b locally, and falling back to Hugging Face APIs.",
+        "Slide 4: Business Potential & Market Strategy. Targeting mid-to-large tech companies. Our subscription SaaS model charges per seat. Initial traction shows a 40% decrease in screening time during pilot testing.",
+        "Slide 5: Conclusions & Growth Milestones. Raising $1M seed funding to expand the ML feature set and scale backend ingestion servers. Expected milestones include integration with major ATS software by Q4."
+      ]
+    }
+  },
+  {
+    type: "pitch_deck_analyzer_upload",
+    label: "🚀 Phase 4: Pitch Deck — File Upload",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde"
+    }
+  },
   {
     type: "skill_verification_pass",
     label: "⭐ Phase 3: Skill Verify — React PASS",
@@ -344,6 +395,64 @@ export default function DebugRoute() {
         } else {
           setErrorMsg(res.error || "Profile completeness calculation failed.");
         }
+      } else if (agentType === "pitch_deck_analyzer_thin" || agentType === "pitch_deck_analyzer_detailed") {
+        const payload = JSON.parse(payloadText);
+        const label = agentType === "pitch_deck_analyzer_thin" ? "Thin Pitch Deck" : "Detailed Pitch Deck";
+        const res = await testPitchDeckAnalysisPreset(payload.candidateId, payload.slidesText, label);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.analysis,
+            cachedRows: res.cachedRows
+          });
+        } else {
+          setErrorMsg(res.error || "Pitch Deck Analysis Preset failed.");
+        }
+      } else if (agentType === "pitch_deck_analyzer_upload") {
+        if (!uploadFile) {
+          setErrorMsg("Please select a file to upload.");
+          setIsLoading(false);
+          return;
+        }
+        const payload = JSON.parse(payloadText);
+        const formData = new FormData();
+        formData.append("file", uploadFile);
+        formData.append("team_id_or_candidate_id", payload.candidateId);
+        
+        const res = await testPitchDeckAnalysis(formData);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.analysis,
+            cachedRows: res.cachedRows
+          });
+        } else {
+          setErrorMsg(res.error || "Pitch Deck Analysis Upload failed.");
+        }
+      } else if (agentType === "fraud_detection_check") {
+        const payload = JSON.parse(payloadText);
+        const res = await testFraudDetectionAction(payload.candidateId);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.report,
+            cachedRows: res.cachedRows
+          });
+        } else {
+          setErrorMsg(res.error || "Fraud Detection check failed.");
+        }
+      } else if (agentType === "authenticity_score") {
+        const payload = JSON.parse(payloadText);
+        const res = await testAuthenticityScoreAction(payload.candidateId);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.report,
+            cachedRows: res.cachedRows
+          });
+        } else {
+          setErrorMsg(res.error || "Authenticity Score check failed.");
+        }
       } else {
         if (agentType === "custom" && !customAgentType.trim()) {
           setErrorMsg("Please specify a custom agent type.");
@@ -450,12 +559,14 @@ export default function DebugRoute() {
               </div>
             )}
 
-            {agentType === "resume_upload" ? (
+            {agentType === "resume_upload" || agentType === "pitch_deck_analyzer_upload" ? (
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-350">Select PDF Resume File</label>
+                <label className="text-sm font-semibold text-slate-300">
+                  {agentType === "resume_upload" ? "Select PDF Resume File" : "Select Pitch Deck File (PDF, PPTX)"}
+                </label>
                 <input
                   type="file"
-                  accept=".pdf"
+                  accept={agentType === "resume_upload" ? ".pdf" : ".pdf,.pptx,.ppt"}
                   onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                   className="bg-slate-950/60 border border-slate-800 rounded-lg px-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition file:bg-slate-900 file:border-slate-800 file:text-slate-200 file:text-xs file:py-1 file:px-2.5 file:rounded file:mr-2"
                 />

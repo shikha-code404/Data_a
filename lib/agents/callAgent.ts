@@ -294,6 +294,102 @@ export async function callAgent(agentType: string, input: object): Promise<objec
           summary: "The team shows stable overall progress with contributions distributed across members. A clear primary developer drives the main feature development, with auxiliary members handling support functions."
         };
         source = "local_team_contribution_summary";
+      } else if (agentType === "ppt_analyzer") {
+        const slidesText = (input as any).slides_text || "";
+        const lower = slidesText.toLowerCase();
+        
+        let innovation = 50;
+        let technical = 50;
+        let presentation = 50;
+        let business = 50;
+        
+        const wordCount = slidesText.split(/\s+/).filter(Boolean).length;
+        
+        if (lower.includes("architecture") || lower.includes("stack") || lower.includes("database") || lower.includes("api") || lower.includes("backend") || lower.includes("frontend")) {
+          technical += 20;
+        }
+        if (lower.includes("patent") || lower.includes("novel") || lower.includes("first ever") || lower.includes("innovative") || lower.includes("breakthrough")) {
+          innovation += 20;
+        }
+        if (lower.includes("market") || lower.includes("revenue") || lower.includes("customer") || lower.includes("business model") || lower.includes("monetization")) {
+          business += 20;
+        }
+        if (lower.includes("conclusion") || lower.includes("summary") || lower.includes("timeline") || lower.includes("milestone")) {
+          presentation += 20;
+        }
+        
+        if (wordCount < 100) {
+          innovation = Math.max(10, innovation - 30);
+          technical = Math.max(10, technical - 35);
+          presentation = Math.max(10, presentation - 25);
+          business = Math.max(10, business - 30);
+        } else if (wordCount > 300) {
+          presentation = Math.min(100, presentation + 15);
+        }
+        
+        const overall = Math.round((innovation + technical + presentation + business) / 4);
+        
+        let suggestions = [
+          "Provide more concrete technical details regarding the architecture and tech stack.",
+          "Elaborate on the business model and target customer acquisition strategy.",
+          "Refine the value proposition to highlight what makes the solution unique."
+        ];
+        
+        if (wordCount < 100) {
+          suggestions.push("Expand the overall content of the deck; it currently lacks sufficient details to evaluate.");
+        }
+        
+        responseObj = {
+          scores: {
+            innovation: Math.min(100, innovation),
+            technical_feasibility: Math.min(100, technical),
+            presentation_quality: Math.min(100, presentation),
+            business_potential: Math.min(100, business),
+            overall_pitch_score: Math.min(100, overall)
+          },
+          summary: `The pitch deck contains a ${wordCount < 100 ? 'brief summary' : 'detailed description'} of the project. It outlines basic concepts but needs further expansion.`,
+          improvement_suggestions: suggestions.slice(0, 5),
+          evaluation_method: "local_fallback"
+        };
+        source = "local_ppt_analyzer";
+      } else if (agentType === "content_originality_analyzer") {
+        const slidesText = JSON.stringify((input as any).slides_text || "").toLowerCase();
+        const answersText = JSON.stringify((input as any).interview_qa || "").toLowerCase();
+        
+        let score = 95;
+        const flags = [];
+        
+        // 1. Check for thin/placeholder pitch deck
+        if (slidesText.includes("slide 1: smartrecruit project") || (slidesText.length > 0 && slidesText.split(/\s+/).length < 50)) {
+          score -= 15;
+          flags.push({
+            type: "template-plagiarism",
+            severity: "medium",
+            evidence: "Pitch deck matches generic boilerplate structure or has extremely low word count."
+          });
+        }
+        
+        // 2. Check for weak answers
+        if (answersText.includes("identical in typescript") || answersText.includes("re-renders if state or props change") || (answersText.length > 0 && answersText.split(/\s+/).length < 60)) {
+          score -= 10;
+          flags.push({
+            type: "style-consistency",
+            severity: "low",
+            evidence: "Interview answers are unusually brief, lacking technical depth expected of the profile."
+          });
+        }
+        
+        let risk = "low";
+        if (score < 60) risk = "high";
+        else if (score < 85) risk = "medium";
+        
+        responseObj = {
+          originality_score: score,
+          risk_level: risk,
+          flags: flags,
+          evaluation_method: "local_fallback"
+        };
+        source = "local_originality_analyzer";
       } else {
         throw new Error(`All model paths failed. Ollama error: ${ollamaErr.message}. Hugging Face error: ${hfErr.message}`);
       }

@@ -4,6 +4,9 @@ import { callAgent } from "@/lib/agents/callAgent";
 import { getSupabaseAdmin } from "@/lib/db/client";
 import { ingestGitHubData } from "@/lib/github/ingestion";
 import { extractTextFromPDF, parseResumeAndSave } from "@/lib/resume/parser";
+import { analyzePitchDeck } from "@/lib/pitch/analyzer";
+import { runFraudChecks } from "@/lib/verification/fraud";
+import { getOrComputeAuthenticityScore } from "@/lib/verification/authenticity";
 import { calculateCandidateTalentScore } from "@/lib/agents/talentScore";
 import { verifyCandidateSkillBadges } from "@/lib/badges/verifier";
 import { getProfileCompletenessForUser } from "@/lib/profile/completeness";
@@ -579,6 +582,172 @@ export async function testTeamContributionsAction(teamId: string, memberIds: str
     return {
       success: false,
       error: err.message,
+    };
+  }
+}
+
+export async function testPitchDeckAnalysis(formData: FormData) {
+  try {
+    const file = formData.get("file") as File;
+    const teamIdOrCandidateId = formData.get("team_id_or_candidate_id") as string;
+    
+    if (!file) {
+      throw new Error("No pitch deck file selected.");
+    }
+    if (!teamIdOrCandidateId) {
+      throw new Error("team_id_or_candidate_id is required.");
+    }
+    
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    
+    const result = await analyzePitchDeck(buffer, file.name, teamIdOrCandidateId);
+    
+    // Fetch cached rows written to pitch_analyses table to show in playground UI
+    const adminClient = getSupabaseAdmin();
+    const { data: cachedRows } = await adminClient
+      .from("pitch_analyses")
+      .select("*")
+      .eq("team_id_or_candidate_id", teamIdOrCandidateId)
+      .order("created_at", { ascending: false });
+      
+    return {
+      success: result.success,
+      analysis: result.data,
+      needsReview: result.needsReview,
+      cachedRows: cachedRows || []
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+}
+
+export async function testPitchDeckAnalysisPreset(candidateId: string, slidesText: string[], label: string) {
+  try {
+    const supabase = getSupabaseAdmin();
+    
+    // Resolve and verify context (must throw error if not found)
+    let exists = false;
+    const { data: profile } = await supabase
+      .from("candidate_profiles")
+      .select("user_id")
+      .eq("user_id", candidateId)
+      .maybeSingle();
+      
+    if (profile) exists = true;
+    else {
+      const { data: team } = await supabase
+        .from("team_contributions")
+        .select("team_id")
+        .eq("team_id", candidateId)
+        .maybeSingle();
+      if (team) exists = true;
+    }
+    
+    if (!exists) {
+      throw new Error(`Referenced record (Candidate or Team) not found in database for ID: ${candidateId}`);
+    }
+
+    const joinedText = slidesText.join("\n");
+    const mockBuffer = Buffer.from(joinedText);
+    
+    const result = await analyzePitchDeck(mockBuffer, `${label}.preset`, candidateId);
+    
+    const { data: cachedRows } = await supabase
+      .from("pitch_analyses")
+      .select("*")
+      .eq("team_id_or_candidate_id", candidateId)
+      .order("created_at", { ascending: false });
+      
+    return {
+      success: result.success,
+      analysis: result.data,
+      needsReview: result.needsReview,
+      cachedRows: cachedRows || []
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+}
+
+export async function testFraudDetectionAction(candidateId: string) {
+  try {
+    if (!candidateId) {
+      throw new Error("Candidate ID is required.");
+    }
+    const report = await runFraudChecks(candidateId);
+    
+    // Fetch cached rows from fraud_checks table
+    const adminClient = getSupabaseAdmin();
+    const { data: cachedRows } = await adminClient
+      .from("fraud_checks")
+      .select("*")
+      .eq("candidate_id", candidateId)
+      .order("created_at", { ascending: false });
+      
+    return {
+      success: true,
+      report,
+      cachedRows: (cachedRows || []).map(row => ({
+        id: row.id,
+        created_at: row.created_at,
+        input_hash: "candidate_id: " + row.candidate_id,
+        input_payload: { candidate_id: row.candidate_id },
+        response: {
+          duplicate_matches: row.duplicate_matches,
+          resume_github_mismatches: row.resume_github_mismatches,
+          certificate_flags: row.certificate_flags
+        }
+      }))
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message
+    };
+  }
+}
+
+export async function testAuthenticityScoreAction(candidateId: string) {
+  try {
+    if (!candidateId) {
+      throw new Error("Candidate ID is required.");
+    }
+    const report = await getOrComputeAuthenticityScore(candidateId, true);
+    
+    // Fetch cached rows from authenticity_scores table
+    const adminClient = getSupabaseAdmin();
+    const { data: cachedRows } = await adminClient
+      .from("authenticity_scores")
+      .select("*")
+      .eq("candidate_id", candidateId)
+      .order("created_at", { ascending: false });
+      
+    return {
+      success: true,
+      report,
+      cachedRows: (cachedRows || []).map(row => ({
+        id: row.candidate_id,
+        created_at: row.created_at,
+        input_hash: "candidate_id: " + row.candidate_id,
+        input_payload: { candidate_id: row.candidate_id },
+        response: {
+          score: row.score,
+          risk_level: row.risk_level,
+          flags: row.flags
+        }
+      }))
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message
     };
   }
 }
