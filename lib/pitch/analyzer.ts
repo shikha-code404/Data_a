@@ -1,3 +1,8 @@
+if (typeof (globalThis as any).DOMMatrix === "undefined") {
+  (globalThis as any).DOMMatrix = class DOMMatrix {
+    a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
+  };
+}
 const pdf = require("pdf-parse");
 import AdmZip from "adm-zip";
 import { z } from "zod";

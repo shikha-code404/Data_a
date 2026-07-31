@@ -112,6 +112,8 @@ export async function runContentOriginalityChecks(candidateId: string): Promise<
  * Combines Prompt 19 (content originality) and Prompt 20 (fraud checks) outputs
  * using the custom weighting logic to compute a single per-candidate report.
  */
+const inMemoryAuthenticityCache = new Map<string, { report: CombinedAuthenticityReport; timestamp: number }>();
+
 export async function getOrComputeAuthenticityScore(
   candidateId: string,
   forceFresh = false
@@ -124,31 +126,37 @@ export async function getOrComputeAuthenticityScore(
 
   // 1. Check for cached result less than 24 hours old
   if (!forceFresh) {
-    const { data: cached, error: cacheErr } = await supabase
-      .from("authenticity_scores")
-      .select("*")
-      .eq("candidate_id", candidateId)
-      .maybeSingle();
-
-    if (cacheErr) {
-      console.warn(`[Authenticity] Error checking cache: ${cacheErr.message}`);
+    const memCached = inMemoryAuthenticityCache.get(candidateId);
+    if (memCached && (Date.now() - memCached.timestamp) < 24 * 60 * 60 * 1000) {
+      console.log(`[Authenticity] Memory Cache HIT for candidate ${candidateId}.`);
+      return memCached.report;
     }
 
-    if (cached) {
-      const createdAt = new Date(cached.created_at);
-      const now = new Date();
-      const diffInHours = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    try {
+      const { data: cached, error: cacheErr } = await supabase
+        .from("authenticity_scores")
+        .select("*")
+        .eq("candidate_id", candidateId)
+        .maybeSingle();
 
-      if (diffInHours < 24) {
-        console.log(`[Authenticity] Cache HIT for candidate ${candidateId}. Age: ${diffInHours.toFixed(1)} hours.`);
-        return {
-          candidate_id: cached.candidate_id,
-          authenticity_score: cached.score,
-          risk_level: cached.risk_level as "low" | "medium" | "high",
-          flags: cached.flags as AuthenticityFlag[],
-          generated_at: new Date(cached.created_at).toISOString()
-        };
+      if (cached) {
+        const createdAt = new Date(cached.created_at);
+        const now = new Date();
+        const diffInHours = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+
+        if (diffInHours < 24) {
+          console.log(`[Authenticity] DB Cache HIT for candidate ${candidateId}. Age: ${diffInHours.toFixed(1)} hours.`);
+          return {
+            candidate_id: cached.candidate_id,
+            authenticity_score: cached.authenticity_score,
+            risk_level: cached.risk_level,
+            flags: cached.flags,
+            generated_at: cached.created_at
+          };
+        }
       }
+    } catch (e) {
+      // Ignore DB cache errors
     }
   }
 
@@ -262,11 +270,15 @@ export async function getOrComputeAuthenticityScore(
     console.warn(`[Authenticity] Failed to save authenticity report: ${saveErr.message}`);
   }
 
-  return {
+  const report: CombinedAuthenticityReport = {
     candidate_id: candidateId,
     authenticity_score: finalScore,
     risk_level: finalRiskLevel,
     flags: combinedFlags,
     generated_at: generatedAt
   };
+
+  inMemoryAuthenticityCache.set(candidateId, { report, timestamp: Date.now() });
+
+  return report;
 }

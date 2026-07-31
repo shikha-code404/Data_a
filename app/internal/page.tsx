@@ -26,9 +26,37 @@ import {
   seedHackathonTestData,
   testHackathonRankingAction,
   fetchHackathonLeaderboardAction,
+  fetchSystemAgentsAction,
+  testCommunityScoreAction,
+  fetchTalentHeatmapAction,
+  fetchRecruiterAnalyticsAction,
 } from "./actions";
 
 const AGENT_PRESETS = [
+  {
+    type: "predictive_hiring_analytics",
+    label: "📊 Phase 7: Predictive Hiring Analytics",
+    defaultPayload: {}
+  },
+  {
+    type: "campus_talent_heatmap",
+    label: "🗺️ Phase 7: Campus Talent Heatmap (Grouped Analytics)",
+    defaultPayload: {
+      groupBy: "campus"
+    }
+  },
+  {
+    type: "community_reputation_score",
+    label: "🏆 Phase 7: Community Reputation Score (Deterministic)",
+    defaultPayload: {
+      candidateId: "0ee73e0e-0529-4480-a16c-15748a277bde"
+    }
+  },
+  {
+    type: "system_architecture",
+    label: "🌐 Phase 7: Multi-Agent Architecture View & Documentation",
+    defaultPayload: {}
+  },
   {
     type: "hackathon_rank",
     label: "🚀 Phase 5: Hackathon Ranking & Leaderboard",
@@ -509,10 +537,56 @@ export default function DebugRoute() {
           setResult({
             response: res.result,
             cachedRows: res.cachedRows,
-            downloadUrl: `/api/resume/${res.result.resume_id}/download`
+            downloadUrl: res.result ? `/api/resume/${res.result.resume_id}/download` : ""
           });
         } else {
           setErrorMsg(res.error || "Resume Generation failed.");
+        }
+      } else if (agentType === "predictive_hiring_analytics") {
+        const res = await fetchRecruiterAnalyticsAction();
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.analytics,
+            cachedRows: []
+          });
+        } else {
+          setErrorMsg((res as any).error || "Predictive analytics failed.");
+        }
+      } else if (agentType === "campus_talent_heatmap") {
+        const payload = JSON.parse(payloadText);
+        const res = await fetchTalentHeatmapAction(payload.groupBy || "campus");
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.heatmap,
+            cachedRows: []
+          });
+        } else {
+          setErrorMsg((res as any).error || "Campus talent heatmap failed.");
+        }
+      } else if (agentType === "community_reputation_score") {
+        const payload = JSON.parse(payloadText);
+        const res = await testCommunityScoreAction(payload.candidateId);
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.report,
+            cachedRows: []
+          });
+        } else {
+          setErrorMsg((res as any).error || "Community reputation score failed.");
+        }
+      } else if (agentType === "system_architecture") {
+        const res = await fetchSystemAgentsAction();
+        setIsLoading(false);
+        if (res.success) {
+          setResult({
+            response: res.agents,
+            cachedRows: []
+          });
+        } else {
+          setErrorMsg((res as any).error || "Failed to fetch system agents.");
         }
       } else if (agentType === "hackathon_rank") {
         const payload = JSON.parse(payloadText);
@@ -579,6 +653,57 @@ export default function DebugRoute() {
           </div>
         </div>
       </header>
+
+      {/* Phase 7: Multi-Agent Architecture Visual Flow Section */}
+      <section className="max-w-7xl mx-auto mb-8 bg-slate-900/60 border border-purple-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-md">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-6">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-400">Phase 7 Documentation Layer</span>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              🌐 Multi-Agent Pipeline Architecture View
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Modular LLM agent orchestration & service execution pipeline (0 extra LLM calls).
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-mono bg-purple-950/60 text-purple-300 border border-purple-800/50 px-3.5 py-1.5 rounded-lg shadow-inner">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>GET /api/system/agents</span>
+          </div>
+        </div>
+
+        {/* Data Flow Diagram */}
+        <div>
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Pipeline Data Flow Sequence</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-3 items-center">
+            {[
+              { name: "User", icon: "👤", desc: "Input Prompt", color: "border-blue-500/40 bg-blue-950/40 text-blue-300" },
+              { name: "Resume Parser", icon: "📄", desc: "NLP Extract", color: "border-purple-500/40 bg-purple-950/40 text-purple-300" },
+              { name: "Talent Profile", icon: "👤", desc: "Schema Storage", color: "border-indigo-500/40 bg-indigo-950/40 text-indigo-300" },
+              { name: "Talent Score", icon: "⭐", desc: "7 Sub-scores", color: "border-amber-500/40 bg-amber-950/40 text-amber-300" },
+              { name: "Embeddings", icon: "🧠", desc: "384d Vector", color: "border-emerald-500/40 bg-emerald-950/40 text-emerald-300" },
+              { name: "Job Matching", icon: "🎯", desc: "pgvector Cosine", color: "border-cyan-500/40 bg-cyan-950/40 text-cyan-300" },
+              { name: "Recruiter Copilot", icon: "🤖", desc: "NL Query Filter", color: "border-violet-500/40 bg-violet-950/40 text-violet-300" },
+              { name: "Career Guidance", icon: "🚀", desc: "AI Roadmap", color: "border-fuchsia-500/40 bg-fuchsia-950/40 text-fuchsia-300" },
+              { name: "Resume Builder", icon: "📝", desc: "ATS Modern/Min", color: "border-sky-500/40 bg-sky-950/40 text-sky-300" },
+              { name: "Fraud Detection", icon: "🛡️", desc: "Authenticity", color: "border-rose-500/40 bg-rose-950/40 text-rose-300" }
+            ].map((node, index) => (
+              <React.Fragment key={node.name}>
+                <div className={`flex flex-col items-center justify-center p-3 rounded-xl border ${node.color} shadow-lg text-center transition hover:scale-105`}>
+                  <span className="text-xl">{node.icon}</span>
+                  <span className="text-[11px] font-bold mt-1 leading-tight">{node.name}</span>
+                  <span className="text-[9px] opacity-70 mt-0.5">{node.desc}</span>
+                </div>
+                {index < 9 && (
+                  <div className="hidden lg:flex items-center justify-center text-purple-400/80 font-bold text-xs">
+                    →
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Form Column */}

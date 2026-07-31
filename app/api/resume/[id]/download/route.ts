@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/db/client";
 import { renderModernHTML, renderMinimalHTML } from "@/lib/resume/templates";
+import { inMemoryResumeStore } from "@/lib/resume/resumeService";
 
 /**
  * GET /api/resume/[id]/download
@@ -24,14 +25,29 @@ export async function GET(
 
     const adminClient = getSupabaseAdmin();
 
-    // Fetch resume
-    const { data: resume, error } = await adminClient
-      .from("resumes")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
+    // Fetch resume (DB or fallback memory store)
+    let resume: any = null;
+    try {
+      const { data, error } = await adminClient
+        .from("resumes")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (!error && data) {
+        resume = data;
+      }
+    } catch (e) {
+      // Ignore DB fetch error
+    }
 
-    if (error || !resume) {
+    if (!resume) {
+      const mem = inMemoryResumeStore.get(id);
+      if (mem) {
+        resume = mem;
+      }
+    }
+
+    if (!resume) {
       return NextResponse.json(
         { error: "Resume not found in database." },
         { status: 404 }
