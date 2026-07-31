@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getCandidateProfileData, completeOnboarding } from "../actions";
 import {
   FileText,
@@ -24,6 +24,7 @@ const GithubIcon = ({ className }: { className?: string }) => (
 
 export default function CandidateOnboarding() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   // Loading and integration states
   const [profile, setProfile] = useState<{
@@ -35,6 +36,7 @@ export default function CandidateOnboarding() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const loadProfileData = async (retries = 2) => {
     const res = await getCandidateProfileData();
@@ -61,6 +63,19 @@ export default function CandidateOnboarding() {
   };
 
   useEffect(() => {
+    // Handle GitHub OAuth callback status
+    const status = searchParams.get("status");
+    if (status === "github_connected") {
+      setSuccessMessage("GitHub account connected successfully!");
+    } else if (status === "github_denied") {
+      setErrorMessage("GitHub authorization was denied. Please try again.");
+    } else if (status === "csrf_failed") {
+      setErrorMessage("Security verification failed. Please try connecting GitHub again.");
+    } else if (status === "token_error" || status === "error") {
+      const message = searchParams.get("message");
+      setErrorMessage(message || "GitHub connection failed. Please try again.");
+    }
+
     loadProfileData();
   }, []);
 
@@ -260,6 +275,13 @@ export default function CandidateOnboarding() {
             </div>
 
           </div>
+
+          {successMessage && (
+            <div className="flex items-start gap-2 bg-emerald-50 dark:bg-emerald-950/15 border border-emerald-200 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-xl p-3 text-xs">
+              <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+          )}
 
           {errorMessage && (
             <div className="mt-8 flex items-start gap-2 bg-[#D2042D]/10 border border-[#D2042D]/20 text-[#D2042D] rounded-xl p-4 text-xs font-bold">

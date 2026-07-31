@@ -17,12 +17,14 @@ export async function GET() {
   const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
   if (!clientId) {
     console.error("NEXT_PUBLIC_GITHUB_CLIENT_ID environment variable is missing.");
+    return new NextResponse("GitHub OAuth is not configured. Missing NEXT_PUBLIC_GITHUB_CLIENT_ID.", { status: 500 });
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const redirectUri = encodeURIComponent(`${siteUrl}/api/auth/github/callback`);
+  const scope = encodeURIComponent("public_repo read:user");
   
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=public_repo,read:user&state=${state}`;
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
 
   return NextResponse.redirect(githubAuthUrl);
 }

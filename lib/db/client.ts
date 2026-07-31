@@ -29,3 +29,7 @@ export function getSupabaseAdmin() {
   );
 }
 
+export function createBrowserDbClient() {
+  return supabaseBrowser;
+}
+

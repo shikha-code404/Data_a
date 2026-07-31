@@ -48,37 +48,21 @@ interface ResumeData {
   projects?: Project[];
 }
 
-const initialResumeData: ResumeData = {
-  name: "Alex Rivera",
-  email: "candidate@hirespark.com",
-  phone: "+1 (555) 019-2834",
-  skills: ["React", "Next.js", "TypeScript", "Node.js", "Supabase", "Python", "PostgreSQL", "GraphQL"],
-  experience: [
-    { 
-      company: "TechSpark Inc.", 
-      role: "Senior Developer", 
-      start_date: "2023", 
-      end_date: "Present", 
-      description: "Architected and deployed highly scalable microservices using Node.js and TypeScript, reducing system latency by 35%. Spearheaded the integration of OpenAI APIs into core SaaS product, enabling automated data extraction and synthesis for enterprise clients. Mentored a team of 4 junior developers, establishing strict CI/CD pipelines and code quality standards." 
-    }
-  ],
-  education: [
-    { 
-      institution: "Institute of Technology", 
-      degree: "B.S. Software Engineering", 
-      field: "Computer Science", 
-      start_year: 2020, 
-      end_year: 2024 
-    }
-  ],
-  projects: [
-    { 
-      name: "AI Vector Matcher", 
-      description: "Local transformer candidate matching pipeline", 
-      technologies: ["React", "Next.js", "TypeScript"] 
-    }
-  ]
+const emptyResumeData: ResumeData = {
+  name: "",
+  email: "",
+  phone: "",
+  skills: [],
+  experience: [],
+  education: [],
+  projects: []
 };
+
+interface TalentScoreData {
+  overall: number;
+  scores: Record<string, number>;
+  reasoning?: string;
+}
 
 const topFirms = [
   { id: "google", label: "Google", letter: "G" },
@@ -98,21 +82,36 @@ export default function ResumePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>("");
-  const [parsedData, setParsedData] = useState<ResumeData>(initialResumeData);
+  const [parsedData, setParsedData] = useState<ResumeData>(emptyResumeData);
+  const [talentScore, setTalentScore] = useState<TalentScoreData | null>(null);
+  const [githubUsername, setGithubUsername] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("modern");
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { candidate_id } = useAuth();
 
   const loadResumeData = async () => {
+    setIsLoading(true);
     const res = await getCandidateProfileData();
-    if (res.success && res.resumeData) {
-      setParsedData(res.resumeData as ResumeData);
+    if (res.success) {
+      if (res.resumeData) {
+        setParsedData(res.resumeData as ResumeData);
+      }
+      if (res.talentScore) {
+        setTalentScore(res.talentScore as TalentScoreData);
+      }
+      if (res.githubUsername) {
+        setGithubUsername(res.githubUsername);
+      }
     }
+    setIsLoading(false);
   };
 
   useEffect(() => {
     if (candidate_id) {
       loadResumeData();
+    } else {
+      setIsLoading(false);
     }
   }, [candidate_id]);
 
@@ -219,6 +218,55 @@ export default function ResumePage() {
         }`}>
           {uploadStatus.startsWith("Success") ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" /> : <Sparkles className="w-4 h-4 shrink-0 text-[#D2042D]" />}
           <span>{uploadStatus}</span>
+        </div>
+      )}
+
+      {/* Talent Score + GitHub Summary Card (hidden on print) */}
+      {!isLoading && (talentScore || githubUsername) && (
+        <div className="bg-[#262626] border border-[#353535] rounded-xl p-5 flex flex-col md:flex-row gap-6 print:hidden">
+          {/* Talent Score */}
+          {talentScore && (
+            <div className="flex items-center gap-5 flex-1">
+              <div className="flex flex-col items-center justify-center min-w-[80px]">
+                <span className="text-[40px] font-extrabold text-[#D2042D] leading-none tracking-tighter">{talentScore.overall}</span>
+                <span className="text-[10px] text-[#A3A3A3] font-bold uppercase tracking-wider mt-1">Talent Score</span>
+              </div>
+              <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
+                {Object.entries(talentScore.scores || {}).map(([key, value]) => (
+                  <div key={key} className="flex flex-col gap-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-[#A3A3A3] font-semibold capitalize">{key.replace(/_/g, " ")}</span>
+                      <span className="text-[10px] text-[#F5F5F5] font-bold">{value}</span>
+                    </div>
+                    <div className="h-1 bg-[#353535] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#D2042D] rounded-full transition-all" style={{ width: `${value}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* GitHub Badge */}
+          {githubUsername && (
+            <div className="flex items-center gap-3 border-l border-[#353535] pl-5">
+              <img src={`https://avatars.githubusercontent.com/${githubUsername}`} alt="GitHub" className="w-10 h-10 rounded-full border border-[#353535]" />
+              <div>
+                <a href={`https://github.com/${githubUsername}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-[#F5F5F5] hover:text-[#D2042D] transition-colors flex items-center gap-1">
+                  @{githubUsername}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <span className="text-[10px] text-[#A3A3A3]">GitHub Connected</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-20 print:hidden">
+          <Loader2 className="w-8 h-8 animate-spin text-[#D2042D]" />
         </div>
       )}
 

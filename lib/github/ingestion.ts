@@ -195,55 +195,62 @@ export async function ingestGitHubData(
     .slice(0, 5)
     .map((repo) => ({ name: repo.name, stars: repo.stars }));
 
-  // 3. Fetch languages & commits per repository (limit to non-forks to save API requests and focus on candidate's work)
-  const nonForkRepos = rawRepos.filter((repo: any) => !repo.fork);
+  // Limit to top 10 non-fork repos (sorted by stars) to cap API calls and speed up ingestion
+  const nonForkRepos = rawRepos
+    .filter((repo: any) => !repo.fork)
+    .sort((a: any, b: any) => (b.stargazers_count || 0) - (a.stargazers_count || 0))
+    .slice(0, 10);
+
   const languageBytes: Record<string, number> = {};
   const commitCountsByRepo: Record<string, number> = {};
   let totalCommitsLast12Months = 0;
   const activeMonthsSet = new Set<string>();
 
-  for (const repo of nonForkRepos) {
-    const repoName = repo.name;
-    const owner = repo.owner?.login || username;
+  // Fetch languages + commit stats for all repos IN PARALLEL for maximum speed
+  await Promise.allSettled(
+    nonForkRepos.map(async (repo: any) => {
+      const repoName = repo.name;
+      const owner = repo.owner?.login || username;
 
-    // Fetch languages
-    try {
-      const langUrl = `https://api.github.com/repos/${owner}/${repoName}/languages`;
-      const langKey = `languages:${username}:${repoName}`;
-      const repoLangs = await fetchWithCache(langKey, langUrl, headers);
+      // Fetch languages
+      try {
+        const langUrl = `https://api.github.com/repos/${owner}/${repoName}/languages`;
+        const langKey = `languages:${username}:${repoName}`;
+        const repoLangs = await fetchWithCache(langKey, langUrl, headers);
 
-      for (const [lang, bytes] of Object.entries(repoLangs)) {
-        languageBytes[lang] = (languageBytes[lang] || 0) + (bytes as number);
+        for (const [lang, bytes] of Object.entries(repoLangs)) {
+          languageBytes[lang] = (languageBytes[lang] || 0) + (bytes as number);
+        }
+      } catch (err) {
+        console.warn(`Failed to ingest languages for repo ${repoName}:`, err);
       }
-    } catch (err) {
-      console.warn(`Failed to ingest languages for repo ${repoName}:`, err);
-    }
 
-    // Fetch commits (past 12 months weekly commit stats)
-    try {
-      const commitStatsUrl = `https://api.github.com/repos/${owner}/${repoName}/stats/commit_activity`;
-      const commitStatsKey = `commits:${username}:${repoName}`;
-      const commitActivity = await fetchWithCache(commitStatsKey, commitStatsUrl, headers);
+      // Fetch commits (past 12 months weekly commit stats)
+      try {
+        const commitStatsUrl = `https://api.github.com/repos/${owner}/${repoName}/stats/commit_activity`;
+        const commitStatsKey = `commits:${username}:${repoName}`;
+        const commitActivity = await fetchWithCache(commitStatsKey, commitStatsUrl, headers);
 
-      if (Array.isArray(commitActivity)) {
-        let repoCommits = 0;
-        for (const week of commitActivity) {
-          repoCommits += week.total || 0;
-          if (week.total > 0 && week.week) {
-            const date = new Date(week.week * 1000);
-            const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-            activeMonthsSet.add(monthStr);
+        if (Array.isArray(commitActivity)) {
+          let repoCommits = 0;
+          for (const week of commitActivity) {
+            repoCommits += week.total || 0;
+            if (week.total > 0 && week.week) {
+              const date = new Date(week.week * 1000);
+              const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+              activeMonthsSet.add(monthStr);
+            }
+          }
+          if (repoCommits > 0) {
+            commitCountsByRepo[repoName] = repoCommits;
+            totalCommitsLast12Months += repoCommits;
           }
         }
-        if (repoCommits > 0) {
-          commitCountsByRepo[repoName] = repoCommits;
-          totalCommitsLast12Months += repoCommits;
-        }
+      } catch (err) {
+        console.warn(`Failed to ingest commit stats for repo ${repoName}:`, err);
       }
-    } catch (err) {
-      console.warn(`Failed to ingest commit stats for repo ${repoName}:`, err);
-    }
-  }
+    })
+  );
 
   // Calculate language weights
   const totalLanguageBytes = Object.values(languageBytes).reduce((a, b) => a + b, 0);
@@ -254,27 +261,27 @@ export async function ingestGitHubData(
     }
   }
 
-  // 4. Fetch PR counts via Search API
+  // 4. Fetch PR counts via Search API (in parallel)
   let prsOpened = 0;
   let prsMerged = 0;
 
-  try {
-    const openedPrsUrl = `https://api.github.com/search/issues?q=author:${username}+type:pr`;
-    const openedPrsKey = `prs_opened:${username}`;
-    const openedResult = await fetchWithCache(openedPrsKey, openedPrsUrl, headers);
-    prsOpened = openedResult.total_count || 0;
-  } catch (err) {
-    console.error("Failed to fetch opened PR count:", err);
-  }
+  const [openedRes, mergedRes] = await Promise.allSettled([
+    (async () => {
+      const openedPrsUrl = `https://api.github.com/search/issues?q=author:${username}+type:pr`;
+      const openedPrsKey = `prs_opened:${username}`;
+      const result = await fetchWithCache(openedPrsKey, openedPrsUrl, headers);
+      return result.total_count || 0;
+    })(),
+    (async () => {
+      const mergedPrsUrl = `https://api.github.com/search/issues?q=author:${username}+type:pr+is:merged`;
+      const mergedPrsKey = `prs_merged:${username}`;
+      const result = await fetchWithCache(mergedPrsKey, mergedPrsUrl, headers);
+      return result.total_count || 0;
+    })(),
+  ]);
 
-  try {
-    const mergedPrsUrl = `https://api.github.com/search/issues?q=author:${username}+type:pr+is:merged`;
-    const mergedPrsKey = `prs_merged:${username}`;
-    const mergedResult = await fetchWithCache(mergedPrsKey, mergedPrsUrl, headers);
-    prsMerged = mergedResult.total_count || 0;
-  } catch (err) {
-    console.error("Failed to fetch merged PR count:", err);
-  }
+  if (openedRes.status === "fulfilled") prsOpened = openedRes.value;
+  if (mergedRes.status === "fulfilled") prsMerged = mergedRes.value;
 
   const result: GitHubIngestionResult = {
     repositories,

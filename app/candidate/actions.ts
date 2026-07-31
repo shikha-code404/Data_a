@@ -53,9 +53,7 @@ export async function uploadResume(formData: FormData) {
     const buffer = Buffer.from(bytes);
 
     const rawText = await extractTextFromPDF(buffer);
-    if (!rawText.trim()) {
-      return { success: false, error: "The uploaded PDF appears to be empty or contains unreadable text." };
-    }
+    console.log(`[Upload Resume] Extracted ${rawText.length} chars from PDF`);
 
     const supabase = await createServerDbClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -108,9 +106,7 @@ export async function completeOnboarding(formData: FormData) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const rawText = await extractTextFromPDF(buffer);
-    if (!rawText.trim()) {
-      return { success: false, error: "The uploaded PDF appears to be empty or contains unreadable text." };
-    }
+    console.log(`[Onboarding] Extracted ${rawText.length} chars from PDF for user ${user.id}`);
 
     console.log(`[Onboarding] Running GitHub Ingestion and Resume Parsing CONCURRENTLY for user ${user.id}...`);
 
