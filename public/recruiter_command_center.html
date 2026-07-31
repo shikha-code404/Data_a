@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HireSpark | Hackathon Command Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Manrope:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#3c3838",
+                        "secondary": "#ecc154",
+                        "on-background": "#e9e1e0",
+                        "surface-variant": "#383433",
+                        "surface-container-highest": "#383433",
+                        "secondary-container": "#b18c22",
+                        "primary-container": "#d2032c",
+                        "surface-dim": "#161312",
+                        "surface-container-low": "#1e1b1b",
+                        "on-primary-fixed": "#410007",
+                        "on-primary-container": "#ffe2e1",
+                        "secondary-fixed": "#ffdf97",
+                        "on-secondary": "#3e2e00",
+                        "inverse-primary": "#bf0027",
+                        "surface": "#161312",
+                        "inverse-on-surface": "#332f2f",
+                        "tertiary-fixed-dim": "#64de87",
+                        "primary": "#ffb3b0",
+                        "on-tertiary-fixed": "#00210b",
+                        "primary-fixed": "#ffdad8",
+                        "background": "#161312",
+                        "on-secondary-fixed": "#251a00",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-container": "#00793a",
+                        "on-tertiary-container": "#98ffaf",
+                        "on-secondary-fixed-variant": "#5a4400",
+                        "primary-fixed-dim": "#ffb3b0",
+                        "inverse-surface": "#e9e1e0",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed": "#81fba0",
+                        "tertiary": "#64de87",
+                        "surface-tint": "#ffb3b0",
+                        "surface-container": "#221f1f",
+                        "on-tertiary-fixed-variant": "#005225",
+                        "on-tertiary": "#003918",
+                        "secondary-fixed-dim": "#ecc154",
+                        "on-surface-variant": "#e6bdbb",
+                        "on-primary": "#680010",
+                        "error-container": "#93000a",
+                        "on-secondary-container": "#362800",
+                        "on-error": "#690005",
+                        "outline": "#ad8886",
+                        "surface-container-lowest": "#100e0d",
+                        "on-surface": "#e9e1e0",
+                        "outline-variant": "#5d3f3e",
+                        "on-primary-fixed-variant": "#92001b",
+                        "surface-container-high": "#2d2929"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-desktop": "40px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "md": "16px",
+                        "base": "4px",
+                        "xl": "32px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "lg": "24px",
+                        "2xl": "48px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Manrope"],
+                        "headline-sm": ["Manrope"],
+                        "display-metrics": ["Manrope"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Manrope"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Manrope"],
+                        "body-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "display-metrics": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #161312;
+            color: #e9e1e0;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .glass-panel {
+            background: rgba(34, 31, 31, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid #5d3f3e;
+        }
+    </style>
+</head>
+<body class="font-body-md text-body-md overflow-x-hidden">
+<!-- Top Navigation Shell -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-margin-desktop py-base bg-surface-container border-b border-outline-variant">
+<div class="flex items-center gap-xl">
+<span class="font-headline-md text-headline-md font-bold text-primary-container">HireSpark</span>
+<nav class="hidden md:flex gap-lg items-center">
+<a class="text-on-surface-variant hover:text-on-surface transition-colors" href="#">Overview</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors" href="#">Pipeline</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors" href="#">Interviews</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors" href="#">Jobs</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors" href="#">Talent Pool</a>
+<a class="text-primary border-b-2 border-primary pb-1" href="#">Hackathons</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-on-surface p-sm transition-all active:scale-95">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-on-surface p-sm transition-all active:scale-95">settings</button>
+<div class="w-8 h-8 rounded-full border border-outline overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a corporate recruiter in a high-tech office environment. The recruiter is wearing minimalist professional attire. The background features blurred digital displays and architectural lines, lit by a clinical yet warm ambient glow reflecting the crimson and charcoal brand palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2O1d5Xfpw_z1JYGaeWacT3c-eIkPkyWsjGCYk9V6fReuC97d2G2u9hAfdmWeT7mLaLb7iINljI6tpj0UjhyiIMz1UUE5SWzhLDhXEc5Nn9VRginIsQqk4u1CajqMNwvr3rst7Gjc8ecXaK4jDUrsF_lFGQbXItuQyPIiny5RMEE3G87fu8GBv1_7Q1WaZarl2t_mH90sOilcgLXZ6-8d6_pJzzILMXh3snX1xcSJBXASrs6aALM4r"/>
+</div>
+</div>
+</header>
+<!-- Side Navigation Shell (Vertical Desktop Rail) -->
+<aside class="fixed left-0 top-0 h-full w-20 flex flex-col items-center pt-24 bg-surface-container-low border-r border-outline-variant z-40 hidden lg:flex">
+<div class="flex flex-col gap-8">
+<button class="flex flex-col items-center gap-xs group transition-all duration-150">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">event</span>
+<span class="font-label-md text-label-md text-on-surface-variant group-hover:text-primary">Events</span>
+</button>
+<button class="flex flex-col items-center gap-xs group transition-all duration-150">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">leaderboard</span>
+<span class="font-label-md text-label-md text-on-surface-variant group-hover:text-primary">Rank</span>
+</button>
+<button class="flex flex-col items-center gap-xs group transition-all duration-150">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">groups</span>
+<span class="font-label-md text-label-md text-on-surface-variant group-hover:text-primary">Teams</span>
+</button>
+<button class="flex flex-col items-center gap-xs group transition-all duration-150">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">terminal</span>
+<span class="font-label-md text-label-md text-on-surface-variant group-hover:text-primary">Logs</span>
+</button>
+<button class="flex flex-col items-center gap-xs group transition-all duration-150">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">settings</span>
+<span class="font-label-md text-label-md text-on-surface-variant group-hover:text-primary">Set</span>
+</button>
+</div>
+</aside>
+<main class="lg:pl-20 pt-24 pb-12 px-margin-mobile md:px-margin-desktop min-h-screen">
+<!-- Header Section -->
+<section class="flex flex-col md:flex-row justify-between items-start md:items-end mb-xl gap-md">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Hackathon Command Center</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Manage active events, technical audits, and talent scouting.</p>
+</div>
+<button class="bg-primary-container text-white px-lg py-sm font-semibold rounded-lg transition-all duration-200 active:scale-95 hover:brightness-110 flex items-center gap-sm">
+<span class="material-symbols-outlined">add</span>
+                New Event
+            </button>
+</section>
+<!-- Bento Grid Dashboard Content -->
+<div class="bento-grid">
+<!-- Technical Health Card (Stats Row) -->
+<div class="col-span-12 glass-panel p-lg rounded-xl flex flex-col md:flex-row gap-lg justify-around">
+<div class="flex flex-col items-center md:items-start">
+<span class="text-label-md font-label-md text-on-surface-variant uppercase tracking-widest">Average Commit Quality</span>
+<div class="flex items-center gap-sm mt-xs">
+<span class="font-display-metrics text-display-metrics text-tertiary">92.4%</span>
+<span class="material-symbols-outlined text-tertiary">trending_up</span>
+</div>
+</div>
+<div class="w-px h-12 bg-outline-variant hidden md:block self-center"></div>
+<div class="flex flex-col items-center md:items-start">
+<span class="text-label-md font-label-md text-on-surface-variant uppercase tracking-widest">Code Complexity Score</span>
+<div class="flex items-center gap-sm mt-xs">
+<span class="font-display-metrics text-display-metrics text-secondary">0.42</span>
+<span class="text-secondary font-label-md text-label-md">Optimal</span>
+</div>
+</div>
+<div class="w-px h-12 bg-outline-variant hidden md:block self-center"></div>
+<div class="flex flex-col items-center md:items-start">
+<span class="text-label-md font-label-md text-on-surface-variant uppercase tracking-widest">Review Velocity</span>
+<div class="flex items-center gap-sm mt-xs">
+<span class="font-display-metrics text-display-metrics text-on-surface">14m</span>
+<span class="text-on-surface-variant font-label-md text-label-md">Avg/PR</span>
+</div>
+</div>
+</div>
+<!-- Active Events Card -->
+<div class="col-span-12 lg:col-span-7 bg-surface-container-high p-lg rounded-xl border border-outline-variant">
+<div class="flex justify-between items-center mb-lg">
+<h2 class="font-headline-sm text-headline-sm">Active Events</h2>
+<button class="text-primary font-label-md text-label-md hover:underline">View All</button>
+</div>
+<div class="space-y-md">
+<!-- Event Row -->
+<div class="flex items-center justify-between p-md bg-surface-container border border-outline-variant rounded hover:border-primary-container transition-colors cursor-pointer group">
+<div class="flex gap-md items-center">
+<div class="w-12 h-12 bg-surface-bright rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">hub</span>
+</div>
+<div>
+<h3 class="font-body-lg font-semibold">AI Innovation 2024</h3>
+<p class="text-body-sm text-on-surface-variant">42 Teams • 168 Participants</p>
+</div>
+</div>
+<span class="px-sm py-xs bg-tertiary-container/20 text-tertiary text-label-md font-bold rounded uppercase">Live</span>
+</div>
+<!-- Event Row -->
+<div class="flex items-center justify-between p-md bg-surface-container border border-outline-variant rounded hover:border-primary-container transition-colors cursor-pointer">
+<div class="flex gap-md items-center">
+<div class="w-12 h-12 bg-surface-bright rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary">layers</span>
+</div>
+<div>
+<h3 class="font-body-lg font-semibold">Full-Stack Sprint</h3>
+<p class="text-body-sm text-on-surface-variant">12 Teams • 48 Participants</p>
+</div>
+</div>
+<span class="px-sm py-xs bg-surface-container-highest text-on-surface-variant text-label-md font-bold rounded uppercase">Pending</span>
+</div>
+<!-- Event Row -->
+<div class="flex items-center justify-between p-md bg-surface-container border border-outline-variant rounded hover:border-primary-container transition-colors cursor-pointer">
+<div class="flex gap-md items-center">
+<div class="w-12 h-12 bg-surface-bright rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">history</span>
+</div>
+<div>
+<h3 class="font-body-lg font-semibold">Legacy Modernization</h3>
+<p class="text-body-sm text-on-surface-variant">28 Teams • Ended 2 days ago</p>
+</div>
+</div>
+<span class="px-sm py-xs bg-outline-variant text-on-surface-variant text-label-md font-bold rounded uppercase">Completed</span>
+</div>
+</div>
+</div>
+<!-- Leaderboard Snippet -->
+<div class="col-span-12 lg:col-span-5 bg-surface-container-high p-lg rounded-xl border border-outline-variant">
+<div class="flex justify-between items-center mb-lg">
+<h2 class="font-headline-sm text-headline-sm">Global Rankings</h2>
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">emoji_events</span>
+</div>
+<div class="space-y-sm">
+<div class="flex items-center gap-md py-sm border-b border-outline-variant">
+<span class="font-bold text-secondary text-headline-sm w-6">01</span>
+<div class="flex-grow">
+<span class="font-semibold">Team Cypher</span>
+<div class="w-full bg-surface-container h-1 rounded-full mt-1">
+<div class="bg-secondary h-1 rounded-full" style="width: 94%"></div>
+</div>
+</div>
+<span class="text-label-md font-bold">2,840 pts</span>
+</div>
+<div class="flex items-center gap-md py-sm border-b border-outline-variant">
+<span class="font-bold text-on-surface-variant text-headline-sm w-6">02</span>
+<div class="flex-grow">
+<span class="font-semibold">Logic Lords</span>
+<div class="w-full bg-surface-container h-1 rounded-full mt-1">
+<div class="bg-on-surface-variant h-1 rounded-full" style="width: 88%"></div>
+</div>
+</div>
+<span class="text-label-md font-bold">2,610 pts</span>
+</div>
+<div class="flex items-center gap-md py-sm border-b border-outline-variant">
+<span class="font-bold text-on-surface-variant text-headline-sm w-6">03</span>
+<div class="flex-grow">
+<span class="font-semibold">Bit Wizards</span>
+<div class="w-full bg-surface-container h-1 rounded-full mt-1">
+<div class="bg-on-surface-variant h-1 rounded-full" style="width: 82%"></div>
+</div>
+</div>
+<span class="text-label-md font-bold">2,455 pts</span>
+</div>
+</div>
+<button class="w-full mt-lg py-sm border border-outline-variant rounded font-label-md text-label-md hover:bg-surface-container-highest transition-colors">Explore Leaderboard</button>
+</div>
+<!-- Talent Discovery Card -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-high p-lg rounded-xl border border-outline-variant relative overflow-hidden">
+<div class="absolute top-0 right-0 p-lg opacity-10">
+<span class="material-symbols-outlined text-[120px]">psychology</span>
+</div>
+<div class="flex justify-between items-center mb-lg">
+<div>
+<h2 class="font-headline-sm text-headline-sm">Talent Discovery</h2>
+<p class="text-body-sm text-on-surface-variant">Top Performers flagged by HireSpark AI</p>
+</div>
+<span class="px-sm py-xs bg-primary-container text-white text-[10px] font-bold rounded uppercase">AI Insights Active</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<div class="flex items-center gap-md p-md bg-surface-container rounded-lg border border-outline-variant">
+<div class="w-12 h-12 rounded-full border-2 border-tertiary p-xs">
+<img class="w-full h-full object-cover rounded-full" data-alt="Close up profile picture of a young software engineer in a dark workspace. Soft green light from the monitor glows on their face. The image has a crisp, professional depth of field focusing on the person's eyes and technological focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4TzWqGwDqha-Q96usnoNA_KRkfytO3RyPtm4moEgX6ttoqHi8sgdqbRMS_Q3Q87Gz-Ut5m5LGZ-lF_S1EszaJ8SUJeNq9M866iGNig4LTcVn0wk_bmcCPcj84vgKb5BM2q75QlFOXW1Pdaf1Zf8QvQ8Qgx6LKkWW6hjiyLmKxSAQ4L02zzigTo8-VvkHfE3PPAH3w7nCZT8g0vh94EQdwgdJD81sLURFX_5WsHYDmBI6Jk9SHoF8I"/>
+</div>
+<div>
+<p class="font-semibold">Marcus Chen</p>
+<p class="text-body-sm text-tertiary">Senior Backend Lead</p>
+<div class="flex gap-xs mt-xs">
+<span class="text-[10px] px-base bg-surface-bright rounded text-on-surface-variant">Go</span>
+<span class="text-[10px] px-base bg-surface-bright rounded text-on-surface-variant">K8s</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-md p-md bg-surface-container rounded-lg border border-outline-variant">
+<div class="w-12 h-12 rounded-full border-2 border-secondary p-xs">
+<img class="w-full h-full object-cover rounded-full" data-alt="Professional portrait of a female developer with glasses, working in a modern studio. Minimalist charcoal background with subtle ambient red lighting elements. The lighting is sophisticated and highlights a high-performance technical professional aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9c7mN8rj_vA9-Y9fp4n1BjX_N3BOZVc-IA5cKJkcW34S_9eTRpqoFKxAWJOsebpGa5QLfBje-X39EjDI-ietgFtr7Eg_43vxw0rYl7vb7pnfnuLq1lKMxwpnT6Cwkv1pL8F8qH6UTFcfdZC3w1nEvTjXiv3-iBvkyqlbe48qyoz3s0GG07i4ROhjbcrsAv15sN_0kPcmZ0JjGZdg6_DwheYg1CHYSlhReKLN_8q5SM-wLGCY5czKd"/>
+</div>
+<div>
+<p class="font-semibold">Sarah Jenkins</p>
+<p class="text-body-sm text-secondary">React Specialist</p>
+<div class="flex gap-xs mt-xs">
+<span class="text-[10px] px-base bg-surface-bright rounded text-on-surface-variant">TypeScript</span>
+<span class="text-[10px] px-base bg-surface-bright rounded text-on-surface-variant">Next.js</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-md p-md bg-surface-container rounded-lg border border-outline-variant">
+<div class="w-12 h-12 rounded-full border-2 border-on-surface-variant p-xs">
+<img class="w-full h-full object-cover rounded-full" data-alt="A focused male data scientist working on complex problems, shown in a high-density corporate environment. The aesthetic is clean, dark, and analytical, with sharp lighting emphasizing precision and technical expertise." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCL8y5v3e1gIb_AQ2P2MUnRfrGOPEI-MTVtt3TD-x2u0Lg-BR3SbpLInSssG-WWxRJo6Sf6MYHjleF8stSQlIBAaj-ZVDdx3e8iT3WfmOAUhs_SrUHz0X_Gs6F9hhUa_kFhSNVdqo9Gk-hBELy2zQTxNDG5EodbCumtkfDOe_4yWwKxoVzQ3FwMJOa36zK4viExO0L4itS87aeH3AbVhG-ZqVTbTV9pHTVJqDIO6zsMF7De4jaqlZoz"/>
+</div>
+<div>
+<p class="font-semibold">Arjun Mehta</p>
+<p class="text-body-sm text-on-surface-variant">ML Ops Engineer</p>
+<div class="flex gap-xs mt-xs">
+<span class="text-[10px] px-base bg-surface-bright rounded text-on-surface-variant">Python</span>
+<span class="text-[10px] px-base bg-surface-bright rounded text-on-surface-variant">PyTorch</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-md p-md bg-surface-container rounded-lg border border-outline-variant">
+<div class="w-12 h-12 rounded-full border-2 border-on-surface-variant p-xs">
+<img class="w-full h-full object-cover rounded-full" data-alt="Portrait of a young tech innovator in a minimalist workspace. The scene is lit with warm amber tones and deep charcoal shadows, capturing a sense of high-end corporate reliability and creative problem-solving." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBshBCN8Eph7u-_Nlt3WgwXMiYAylJUH0UdsNp-uIZ0Jw68wCaRt0YorZhi7Vgd6eNiGyO8lnaIo8D6xORps7CzrTJFaknyGiJdDxv-IklaharqkJ7HQUtlNAYaZlHvO4cT1JnF4iqcXUzn3b1NwwVJB2ZTil9LOzEvt891_i5MHyj0LTmP-bT7Yirgb60bJhE8KU2KA0KalV0vIj77J788sukLTgMLkWwY5vvXN3Tuv4TrZtDg5und"/>
+</div>
+<div>
+<p class="font-semibold">Elena Rossi</p>
+<p class="text-body-sm text-on-surface-variant">System Architect</p>
+<div class="flex gap-xs mt-xs">
+<span class="text-[10px] px-base bg-surface-bright rounded text-on-surface-variant">Rust</span>
+<span class="text-[10px] px-base bg-surface-bright rounded text-on-surface-variant">Wasm</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Activity Feed -->
+<div class="col-span-12 lg:col-span-4 bg-surface-container-high p-lg rounded-xl border border-outline-variant flex flex-col">
+<h2 class="font-headline-sm text-headline-sm mb-lg">Recent Activity</h2>
+<div class="flex-grow space-y-md overflow-y-auto pr-sm scrollbar-hide">
+<div class="flex gap-md">
+<div class="relative flex flex-col items-center">
+<div class="w-2 h-2 rounded-full bg-tertiary mt-1.5"></div>
+<div class="w-px flex-grow bg-outline-variant my-1"></div>
+</div>
+<div class="pb-md">
+<p class="font-semibold text-body-md">Technical Audit Completed</p>
+<p class="text-body-sm text-on-surface-variant">Team Cypher: Repository security check passed with 0 vulnerabilities.</p>
+<span class="text-[10px] text-on-surface-variant font-mono">2 mins ago</span>
+</div>
+</div>
+<div class="flex gap-md">
+<div class="relative flex flex-col items-center">
+<div class="w-2 h-2 rounded-full bg-primary-container mt-1.5"></div>
+<div class="w-px flex-grow bg-outline-variant my-1"></div>
+</div>
+<div class="pb-md">
+<p class="font-semibold text-body-md">Team Formed</p>
+<p class="text-body-sm text-on-surface-variant">"The Dev-ils" registered for AI Innovation 2024.</p>
+<span class="text-[10px] text-on-surface-variant font-mono">14 mins ago</span>
+</div>
+</div>
+<div class="flex gap-md">
+<div class="relative flex flex-col items-center">
+<div class="w-2 h-2 rounded-full bg-secondary mt-1.5"></div>
+<div class="w-px flex-grow bg-outline-variant my-1"></div>
+</div>
+<div class="pb-md">
+<p class="font-semibold text-body-md">Milestone Reached</p>
+<p class="text-body-sm text-on-surface-variant">50% of teams have submitted their MVP architecture.</p>
+<span class="text-[10px] text-on-surface-variant font-mono">1 hr ago</span>
+</div>
+</div>
+<div class="flex gap-md">
+<div class="relative flex flex-col items-center">
+<div class="w-2 h-2 rounded-full bg-outline mt-1.5"></div>
+</div>
+<div>
+<p class="font-semibold text-body-md">Event Baseline Set</p>
+<p class="text-body-sm text-on-surface-variant">Hackathon "Full-Stack Sprint" initialization complete.</p>
+<span class="text-[10px] text-on-surface-variant font-mono">4 hrs ago</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Background Decoration -->
+<div class="fixed inset-0 pointer-events-none z-[-1] opacity-20">
+
+</div>
+<script>
+        // Micro-interaction for cards
+        document.querySelectorAll('.bg-surface-container-high').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.borderColor = '#d2032c';
+                card.style.transform = 'translateY(-2px)';
+                card.style.transition = 'all 0.3s ease-out';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.borderColor = '#5d3f3e';
+                card.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+</body></html>

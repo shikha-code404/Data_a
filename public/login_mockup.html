@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login - HireSpark Enterprise</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#005225",
+                        "surface-variant": "#383433",
+                        "surface-dim": "#161312",
+                        "tertiary-fixed-dim": "#64de87",
+                        "surface-container": "#221f1f",
+                        "on-background": "#e9e1e0",
+                        "on-secondary-fixed-variant": "#5a4400",
+                        "background": "#161312",
+                        "surface-container-low": "#1e1b1b",
+                        "primary-fixed": "#ffdad8",
+                        "on-tertiary-fixed": "#00210b",
+                        "surface-container-highest": "#383433",
+                        "surface-bright": "#3c3838",
+                        "on-surface": "#e9e1e0",
+                        "primary-container": "#d2032c",
+                        "on-tertiary": "#003918",
+                        "inverse-primary": "#bf0027",
+                        "on-secondary-container": "#362800",
+                        "tertiary-fixed": "#81fba0",
+                        "tertiary": "#64de87",
+                        "inverse-surface": "#e9e1e0",
+                        "outline-variant": "#5d3f3e",
+                        "secondary": "#ecc154",
+                        "primary": "#ffb3b0",
+                        "on-error-container": "#ffdad6",
+                        "on-primary": "#680010",
+                        "inverse-on-surface": "#332f2f",
+                        "on-primary-fixed": "#410007",
+                        "secondary-container": "#b18c22",
+                        "on-tertiary-container": "#98ffaf",
+                        "on-secondary-fixed": "#251a00",
+                        "secondary-fixed-dim": "#ecc154",
+                        "surface-tint": "#ffb3b0",
+                        "secondary-fixed": "#ffdf97",
+                        "surface-container-lowest": "#100e0d",
+                        "tertiary-container": "#00793a",
+                        "on-error": "#690005",
+                        "surface-container-high": "#2d2929",
+                        "on-surface-variant": "#e6bdbb",
+                        "on-secondary": "#3e2e00",
+                        "error-container": "#93000a",
+                        "surface": "#161312",
+                        "primary-fixed-dim": "#ffb3b0",
+                        "on-primary-container": "#ffe2e1",
+                        "on-primary-fixed-variant": "#92001b",
+                        "error": "#ffb4ab",
+                        "outline": "#ad8886",
+                        "brand-deep-rose": "#D2042D"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "margin-desktop": "40px",
+                        "base": "4px",
+                        "2xl": "48px",
+                        "xs": "4px",
+                        "gutter": "24px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "lg": "24px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Manrope"],
+                        "headline-lg-mobile": ["Manrope"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Manrope"],
+                        "display-metrics": ["Manrope"],
+                        "body-sm": ["Inter"],
+                        "headline-sm": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "display-metrics": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #161312;
+            color: #e9e1e0;
+            font-family: 'Inter', sans-serif;
+        }
+        .enterprise-card {
+            background-color: #1e1b1b;
+            border: 1px solid #383433;
+        }
+        .input-enterprise {
+            background-color: #100e0d;
+            border: 1px solid #383433;
+            color: #e9e1e0;
+            transition: all 0.2s ease;
+        }
+        .input-enterprise:focus {
+            border-color: #D2042D;
+            outline: none;
+            box-shadow: 0 0 0 1px #D2042D;
+        }
+        .btn-brand {
+            background-color: #D2042D;
+            color: white;
+            transition: opacity 0.2s ease;
+        }
+        .btn-brand:hover {
+            opacity: 0.9;
+        }
+        .btn-social-yellow {
+            background-color: #ecc154;
+            color: #161312;
+            transition: filter 0.2s ease;
+        }
+        .btn-social-yellow:hover {
+            filter: brightness(1.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6 bg-[radial-gradient(circle_at_center,_#221f1f_0%,_#161312_100%)]">
+<div class="w-full max-w-md mx-auto">
+<!-- Logo Area -->
+<div class="text-center mb-10">
+<h1 class="font-display-metrics text-display-metrics text-brand-deep-rose mb-1">HireSpark</h1>
+<p class="font-body-md text-body-md text-on-surface-variant uppercase tracking-widest opacity-80">Enterprise Talent Intelligence</p>
+</div>
+<!-- Login Card -->
+<div class="enterprise-card rounded-xl p-8 shadow-2xl">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-8">Welcome back</h2>
+<form class="space-y-6">
+<!-- Email Field -->
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2" for="email">Email address</label>
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline text-[20px]">mail</span>
+</div>
+<input class="input-enterprise block w-full pl-10 pr-3 py-3 rounded font-body-md text-body-md focus:ring-0" id="email" name="email" placeholder="you@company.com" required="" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div>
+<div class="flex justify-between items-center mb-2">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="password">Password</label>
+<a class="font-label-md text-label-md text-brand-deep-rose hover:underline" href="#">Forgot Password?</a>
+</div>
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline text-[20px]">lock</span>
+</div>
+<input class="input-enterprise block w-full pl-10 pr-3 py-3 rounded font-body-md text-body-md focus:ring-0" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+</div>
+</div>
+<!-- Submit Button -->
+<div class="pt-2">
+<button class="btn-brand w-full flex justify-center py-3.5 px-4 rounded font-label-md text-label-md font-semibold tracking-wide" type="submit">
+                        SIGN IN
+                    </button>
+</div>
+</form>
+<div class="mt-8">
+<div class="relative">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-surface-variant"></div>
+</div>
+<div class="relative flex justify-center text-sm">
+<span class="px-3 bg-[#1e1b1b] text-on-surface-variant font-label-md text-label-md">Or continue with</span>
+</div>
+</div>
+<div class="mt-6 grid grid-cols-2 gap-4">
+<button class="btn-social-yellow w-full inline-flex justify-center py-2.5 px-4 rounded font-label-md text-label-md items-center font-bold">
+<span class="material-symbols-outlined mr-2 text-[18px]">account_circle</span>
+                        GOOGLE
+                    </button>
+<button class="btn-social-yellow w-full inline-flex justify-center py-2.5 px-4 rounded font-label-md text-label-md items-center font-bold">
+<span class="material-symbols-outlined mr-2 text-[18px]">work</span>
+                        LINKEDIN
+                    </button>
+</div>
+</div>
+<p class="mt-10 text-center font-body-md text-body-md text-on-surface-variant">
+                Don't have an account? 
+                <a class="font-label-md text-label-md text-brand-deep-rose font-bold hover:underline ml-1" href="#">Sign up</a>
+</p>
+</div>
+<!-- Footer Info -->
+<div class="mt-8 text-center">
+<p class="text-outline text-[10px] uppercase tracking-[0.2em]">Secure Enterprise Access • © 2024 HireSpark</p>
+</div>
+</div>
+</body></html>
