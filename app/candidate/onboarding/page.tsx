@@ -36,7 +36,7 @@ export default function CandidateOnboarding() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadProfileData = async () => {
+  const loadProfileData = async (retries = 2) => {
     const res = await getCandidateProfileData();
     if (res.success) {
       // If candidate is already onboarded, redirect straight to dashboard
@@ -48,8 +48,16 @@ export default function CandidateOnboarding() {
         githubUsername: res.githubUsername,
         isGitHubConnected: !!res.isGitHubConnected,
       });
+      setIsLoading(false);
+    } else if (retries > 0) {
+      // Session cookies may not have propagated yet after signup — retry
+      await new Promise((r) => setTimeout(r, 1000));
+      return loadProfileData(retries - 1);
+    } else {
+      // Fallback: show onboarding UI with no GitHub connected
+      setProfile({ githubUsername: null, isGitHubConnected: false });
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   useEffect(() => {

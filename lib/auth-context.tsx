@@ -168,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       await syncUserSession(data.user);
-      router.push(role === "candidate" ? "/candidate" : "/recruiter");
+      router.push(role === "candidate" ? "/candidate/onboarding" : "/recruiter");
     }
 
     return {};
