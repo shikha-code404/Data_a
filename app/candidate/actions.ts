@@ -15,7 +15,7 @@ export async function getCandidateProfileData() {
 
     const { data: profile, error: dbError } = await supabase
       .from("candidate_profiles")
-      .select("github_username, github_access_token, github_data, resume_data, resume_needs_review, talent_profile")
+      .select("github_username, github_access_token, github_data, resume_data, resume_needs_review, talent_profile, talent_score, career_roadmap, salary_estimate")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -32,6 +32,9 @@ export async function getCandidateProfileData() {
       resumeData: (profile?.resume_data as ResumeData) || null,
       resumeNeedsReview: !!profile?.resume_needs_review,
       talentProfile: profile?.talent_profile || null,
+      talentScore: profile?.talent_score || null,
+      careerRoadmap: profile?.career_roadmap || null,
+      salaryEstimate: profile?.salary_estimate || null,
     };
   } catch (err: any) {
     console.error("Failed to get profile data:", err);
@@ -179,6 +182,137 @@ export async function saveTalentProfile(talentProfile: any) {
     return { success: true };
   } catch (err: any) {
     console.error("Failed to save edited talent profile:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function generateTalentScoreAction() {
+  const { calculateCandidateTalentScore } = require("@/lib/agents/talentScore");
+  try {
+    const supabase = await createServerDbClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "Unauthorized" };
+    }
+    const result = await calculateCandidateTalentScore(user.id);
+    return result;
+  } catch (err: any) {
+    console.error("Failed to generate talent score:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function getCandidateJobMatches() {
+  try {
+    const supabase = await createServerDbClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const { data: recs, error: dbError } = await supabase
+      .from("job_recommendations")
+      .select(`
+        id,
+        match_percentage,
+        breakdown,
+        job_postings (
+          id,
+          title,
+          company,
+          description,
+          location,
+          salary_range,
+          skills_required
+        )
+      `)
+      .eq("candidate_id", user.id);
+
+    if (dbError) {
+      console.error("Failed to query job recommendations:", dbError);
+      return { success: false, error: "Database error" };
+    }
+
+    const jobs = (recs || []).map((r: any) => {
+      const job = r.job_postings;
+      return {
+        id: r.id,
+        jobId: job?.id || "",
+        title: job?.title || "Untitled Position",
+        company: job?.company || "Partner Company",
+        location: job?.location || "Remote",
+        type: "Full-time",
+        salary: job?.salary_range || "$120,000 - $150,000",
+        matchScore: r.match_percentage || 50,
+        description: job?.description || "",
+        badges: job?.skills_required || [],
+        matchedSkills: r.breakdown?.matching_skills || [],
+        skillGaps: r.breakdown?.missing_skills || []
+      };
+    });
+
+    return { success: true, jobs };
+  } catch (err: any) {
+    console.error("Failed to fetch job matches:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function getCandidateHackathons() {
+  try {
+    const supabase = await createServerDbClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // 1. Get candidate profile id
+    const { data: profile, error: profileErr } = await supabase
+      .from("candidate_profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profileErr || !profile) {
+      return { success: false, error: "Candidate profile not found." };
+    }
+
+    // 2. Fetch team memberships
+    const { data: memberships, error: dbError } = await supabase
+      .from("hackathon_members")
+      .select(`
+        team_id,
+        team:hackathon_teams (
+          id,
+          team_name,
+          hackathon:hackathons (
+            id,
+            name,
+            date,
+            description
+          )
+        )
+      `)
+      .eq("candidate_id", profile.id);
+
+    if (dbError) {
+      console.error("Failed to query hackathon memberships:", dbError);
+      return { success: false, error: "Database error" };
+    }
+
+    const regs = (memberships || []).map((m: any) => {
+      const team = m.team;
+      const hack = team?.hackathon;
+      return {
+        id: hack?.id || team?.id || "",
+        title: hack?.name || team?.team_name || "Hackathon Event",
+        status: `Team: ${team?.team_name || "Assigned"}`,
+      };
+    });
+
+    return { success: true, registrations: regs };
+  } catch (err: any) {
+    console.error("Failed to fetch hackathons:", err);
     return { success: false, error: err.message };
   }
 }

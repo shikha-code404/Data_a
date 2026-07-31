@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   TrendingUp, 
   Award, 
@@ -13,23 +13,110 @@ import {
   Sparkles,
   Briefcase
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 export default function GuidancePage() {
+  const { candidate_id } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [showComp, setShowComp] = useState(false);
 
-  const handleUpdateProfile = () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [skillGap, setSkillGap] = useState<any>(null);
+  const [cert, setCert] = useState<any>(null);
+  const [salaryRange, setSalaryRange] = useState<any>(null);
+  const [roadmap, setRoadmap] = useState<any[]>([]);
+
+  const fetchGuidance = async (id: string, forceFresh = false) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/career/guidance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidate_id: id, force_fresh: forceFresh })
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed to load career insights");
+      
+      if (result.success !== false) {
+        const data = result.career_roadmap || {};
+        if (data.skill_gaps && data.skill_gaps.length > 0) {
+          setSkillGap(data.skill_gaps[0]);
+        } else {
+          setSkillGap(null);
+        }
+        if (data.recommended_certifications && data.recommended_certifications.length > 0) {
+          setCert(data.recommended_certifications[0]);
+        } else {
+          setCert(null);
+        }
+        if (result.salary_estimate) {
+          setSalaryRange(result.salary_estimate);
+        } else {
+          setSalaryRange(null);
+        }
+        if (data.career_roadmap) {
+          setRoadmap(data.career_roadmap);
+        } else {
+          setRoadmap([]);
+        }
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (candidate_id) {
+      fetchGuidance(candidate_id);
+    } else {
+      setLoading(true);
+    }
+  }, [candidate_id]);
+
+  const handleUpdateProfile = async () => {
+    if (!candidate_id) return;
     setIsUpdating(true);
     setUpdateSuccess(false);
-    setTimeout(() => {
-      setIsUpdating(false);
+    try {
+      await fetchGuidance(candidate_id, true);
       setUpdateSuccess(true);
       setTimeout(() => {
         setUpdateSuccess(false);
       }, 3000);
-    }, 1500);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUpdating(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-8 max-w-[1440px] mx-auto w-full px-4 md:px-0 text-[#e5e2e1] flex flex-col items-center justify-center py-20">
+        <RefreshCw className="w-8 h-8 animate-spin text-[#D2042D] mb-4" />
+        <p className="text-sm text-[#A3A3A3]">Calculating career path & matching insights...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8 max-w-[1440px] mx-auto w-full px-4 md:px-0 text-[#e5e2e1] flex flex-col items-center justify-center py-20 gap-4">
+        <div className="bg-[#262626] border border-[#353535] p-6 rounded-xl text-center max-w-md">
+          <p className="text-sm text-[#A3A3A3] mb-4">You must calculate your Talent Score before career insights can be generated.</p>
+          <a href="/candidate" className="px-6 py-2.5 bg-[#D2042D] text-white font-bold rounded-xl text-xs inline-block">
+            Go to Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-[1440px] mx-auto w-full px-4 md:px-0 text-[#e5e2e1]">
@@ -37,7 +124,7 @@ export default function GuidancePage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#353534]/50 pb-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-[#F5F5F5] font-sans">Career Insights</h2>
-          <p className="text-sm text-[#D4D4D4] mt-1 font-sans">Based on your 92% talent score and market demand.</p>
+          <p className="text-sm text-[#D4D4D4] mt-1 font-sans">Based on your talent profile alignment and market demand.</p>
         </div>
         <button 
           onClick={handleUpdateProfile}
@@ -62,7 +149,9 @@ export default function GuidancePage() {
                   <TrendingUp className="w-6 h-6 text-[#D2042D]" />
                   <h4 className="text-xl font-semibold text-[#F5F5F5]">Skill Focus</h4>
                 </div>
-                <p className="text-xs font-semibold text-[#A3A3A3] mb-6 tracking-widest uppercase">Cloud Deployment &amp; DevOps</p>
+                <p className="text-xs font-semibold text-[#A3A3A3] mb-6 tracking-widest uppercase">
+                  {skillGap ? skillGap.skill : "Full-Stack Gaps"}
+                </p>
                 
                 <div className="flex items-center gap-4 my-8">
                   <div className="flex-1 bg-[#171717] rounded-full h-3 relative">
@@ -75,14 +164,14 @@ export default function GuidancePage() {
                 </div>
                 
                 <div className="flex justify-between text-xs font-semibold text-[#A3A3A3] mb-8">
-                  <span>Beginner</span>
-                  <span className="text-[#D2042D] font-bold">Intermediate</span>
+                  <span>Current: {skillGap ? skillGap.current_level : "Beginner"}</span>
+                  <span className="text-[#D2042D] font-bold">Target: {skillGap ? skillGap.target_level : "Expert"}</span>
                 </div>
               </div>
               
               <div className="bg-[#171717] rounded-lg p-4 border border-[#353535]/80">
                 <p className="text-sm text-[#D4D4D4]">
-                  Closing this gap increases your match rate for Senior positions by <span className="text-white font-semibold">34%</span>.
+                  {skillGap ? skillGap.why : "Strengthening this focus increases match percentage on senior positions."}
                 </p>
               </div>
             </div>
@@ -94,14 +183,16 @@ export default function GuidancePage() {
                   <Award className="w-6 h-6 text-[#D2042D]" />
                   <h4 className="text-xl font-semibold text-[#F5F5F5]">Recommended Cert</h4>
                 </div>
-                <h5 className="text-lg font-semibold text-[#F5F5F5] mt-6 mb-1">AWS Certified Developer - Associate</h5>
-                <p className="text-sm text-[#A3A3A3] mb-8">Amazon Web Services</p>
+                <h5 className="text-lg font-semibold text-[#F5F5F5] mt-6 mb-1">
+                  {cert ? cert.name : "AWS Certified Developer"}
+                </h5>
+                <p className="text-sm text-[#A3A3A3] mb-8">{cert ? cert.provider : "Amazon Web Services"}</p>
               </div>
               
               <div className="flex items-start gap-3 bg-[#171717] rounded-lg p-4 border border-[#353535]/80">
                 <Sparkles className="w-5 h-5 text-[#A3A3A3] shrink-0 mt-0.5" />
                 <p className="text-sm text-[#D4D4D4]">
-                  Highly requested in <span className="text-white font-semibold">85%</span> of your target job matches.
+                  {cert ? cert.reason : "Highly requested in your target matches."}
                 </p>
               </div>
             </div>
@@ -128,8 +219,10 @@ export default function GuidancePage() {
             ) : (
               <div className="bg-[#171717] rounded-lg p-6 border border-[#ecc154]/20 shadow-inner text-center animate-fade-in space-y-2">
                 <p className="text-xs text-[#A3A3A3] uppercase tracking-wider font-semibold">Estimated Market Range</p>
-                <h3 className="text-3xl font-extrabold text-[#ecc154] tracking-tight">$145,000 - $175,000</h3>
-                <p className="text-xs text-[#D4D4D4]">Annual Base Salary (USD)</p>
+                <h3 className="text-3xl font-extrabold text-[#ecc154] tracking-tight">
+                  {salaryRange ? `$${salaryRange.estimated_range?.min?.toLocaleString()} - $${salaryRange.estimated_range?.max?.toLocaleString()}` : "$145,000 - $175,000"}
+                </h3>
+                <p className="text-xs text-[#D4D4D4]">Annual Base Salary ({salaryRange?.estimated_range?.currency || "USD"})</p>
                 <button 
                   onClick={() => setShowComp(false)}
                   className="text-xs text-[#A3A3A3] hover:text-white underline mt-2 block mx-auto"
@@ -144,7 +237,7 @@ export default function GuidancePage() {
             <div className="flex items-start gap-2.5">
               <Info className="w-4 h-4 text-[#A3A3A3] shrink-0 mt-0.5" />
               <p className="text-xs text-[#D4D4D4] leading-relaxed">
-                Basis: Estimate derived from cross-referencing your verified skills in React and Node.js against real-time market data for Senior Frontend roles in remote US hubs.
+                {salaryRange ? salaryRange.basis : "Basis: Estimate derived from cross-referencing your verified skills against real-time market data."}
               </p>
             </div>
           </div>
@@ -161,43 +254,36 @@ export default function GuidancePage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
             
-            {/* Node 1 */}
-            <div className="flex flex-col items-center md:items-start text-center md:text-left">
-              <div className="h-4.5 w-4.5 rounded-full bg-[#D2042D] border-4 border-[#262626] mb-4 shadow-[0_0_0_2px_#353535] z-10 shrink-0"></div>
-              <div className="bg-[#171717] border border-[#353535] rounded-lg p-6 w-full text-left hover:border-[#D2042D]/45 transition-colors duration-300">
-                <span className="text-xs font-semibold text-[#A3A3A3] block mb-1">Months 1 - 3</span>
-                <h5 className="text-lg font-semibold text-[#F5F5F5] mb-4">Skill Deepening &amp; Gaps</h5>
-                <ul className="space-y-4">
-                  <li className="flex items-start gap-2.5 text-xs text-[#D4D4D4]">
-                    <CheckCircle2 className="w-4 h-4 text-[#A3A3A3] shrink-0 mt-0.5" />
-                    <span>Complete Advanced React Patterns course.</span>
-                  </li>
-                  <li className="flex items-start gap-2.5 text-xs text-[#D4D4D4]">
-                    <CheckCircle2 className="w-4 h-4 text-[#A3A3A3] shrink-0 mt-0.5" />
-                    <span>Initiate Docker/Kubernetes basics.</span>
-                  </li>
-                </ul>
+            {roadmap.length > 0 ? (
+              roadmap.slice(0, 2).map((node, idx) => (
+                <div key={idx} className="flex flex-col items-center md:items-start text-center md:text-left">
+                  <div className={`h-4.5 w-4.5 rounded-full border-4 border-[#262626] mb-4 shadow-[0_0_0_2px_#353535] z-10 shrink-0 ${idx === 0 ? "bg-[#D2042D]" : "bg-[#353535]"}`}></div>
+                  <div className="bg-[#171717] border border-[#353535] rounded-lg p-6 w-full text-left hover:border-[#D2042D]/45 transition-colors duration-300">
+                    <span className="text-xs font-semibold text-[#A3A3A3] block mb-1">{node.timeframe}</span>
+                    <h5 className="text-lg font-semibold text-[#F5F5F5] mb-4">{node.stage}</h5>
+                    <ul className="space-y-4">
+                      {Array.isArray(node.milestones) ? (
+                        node.milestones.map((milestone: string, mIdx: number) => (
+                          <li key={mIdx} className="flex items-start gap-2.5 text-xs text-[#D4D4D4]">
+                            <CheckCircle2 className="w-4 h-4 text-[#A3A3A3] shrink-0 mt-0.5" />
+                            <span>{milestone}</span>
+                          </li>
+                        ))
+                      ) : (
+                        <li className="flex items-start gap-2.5 text-xs text-[#D4D4D4]">
+                          <CheckCircle2 className="w-4 h-4 text-[#A3A3A3] shrink-0 mt-0.5" />
+                          <span>{node.milestones}</span>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-2 text-center py-10 text-xs text-[#A3A3A3]">
+                No roadmap nodes generated.
               </div>
-            </div>
-
-            {/* Node 2 */}
-            <div className="flex flex-col items-center md:items-start text-center md:text-left">
-              <div className="h-4.5 w-4.5 rounded-full bg-[#353535] border-4 border-[#262626] mb-4 shadow-[0_0_0_2px_#353535] z-10 shrink-0"></div>
-              <div className="bg-[#171717] border border-[#353535] rounded-lg p-6 w-full text-left hover:border-[#353535]/80 transition-colors duration-300">
-                <span className="text-xs font-semibold text-[#A3A3A3] block mb-1">Months 4 - 6</span>
-                <h5 className="text-lg font-semibold text-[#F5F5F5] mb-4">Professional Certification</h5>
-                <ul className="space-y-4">
-                  <li className="flex items-start gap-2.5 text-xs text-[#D4D4D4]">
-                    <Circle className="w-4 h-4 text-[#A3A3A3] shrink-0 mt-0.5" />
-                    <span>Study for AWS Developer Associate.</span>
-                  </li>
-                  <li className="flex items-start gap-2.5 text-xs text-[#D4D4D4]">
-                    <Circle className="w-4 h-4 text-[#A3A3A3] shrink-0 mt-0.5" />
-                    <span>Build serverless demo project.</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
+            )}
 
           </div>
         </div>

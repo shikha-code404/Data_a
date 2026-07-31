@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Trophy, 
   Calendar, 
@@ -10,8 +10,11 @@ import {
   BarChart3, 
   Code2, 
   CheckCircle,
-  Users
+  Users,
+  Loader2
 } from "lucide-react";
+import { getCandidateHackathons } from "../actions";
+import { useAuth } from "@/lib/auth-context";
 
 interface Challenge {
   id: string;
@@ -29,10 +32,63 @@ interface Registration {
 }
 
 export default function HackathonsPage() {
+  const { candidate_id } = useAuth();
   const [isRegistered, setIsRegistered] = useState(false);
-  const [registrations, setRegistrations] = useState<Registration[]>([
-    { id: "fintech", title: "FinTech Innovators", status: "Team matching pending" }
-  ]);
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [selectedHackathonId, setSelectedHackathonId] = useState<string | null>(null);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+
+  const fetchRegs = async () => {
+    setLoading(true);
+    try {
+      const res = await getCandidateHackathons();
+      if (res.success && res.registrations) {
+        setRegistrations(res.registrations);
+        if (res.registrations.length > 0) {
+          setSelectedHackathonId(res.registrations[0].id);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLeaderboard = async (id: string) => {
+    setLoadingLeaderboard(true);
+    try {
+      const res = await fetch(`/api/hackathons/${id}/leaderboard`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.leaderboard)) {
+        setLeaderboard(data.leaderboard);
+      } else {
+        setLeaderboard([]);
+      }
+    } catch (e) {
+      console.error(e);
+      setLeaderboard([]);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
+  useEffect(() => {
+    if (candidate_id) {
+      fetchRegs();
+    }
+  }, [candidate_id]);
+
+  useEffect(() => {
+    if (selectedHackathonId) {
+      fetchLeaderboard(selectedHackathonId);
+    } else {
+      setLeaderboard([]);
+    }
+  }, [selectedHackathonId]);
 
   const handleRegister = () => {
     if (!isRegistered) {
@@ -71,6 +127,15 @@ export default function HackathonsPage() {
     }
   ];
 
+  if (loading) {
+    return (
+      <div className="space-y-8 max-w-[1440px] mx-auto w-full px-4 md:px-0 text-[#e5e2e1] flex flex-col items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-[#D2042D] mb-4" />
+        <p className="text-xs text-[#A3A3A3]">Loading hackathon dashboard...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 max-w-[1440px] mx-auto w-full text-[#e5e2e1] font-sans pb-12">
       {/* Header */}
@@ -84,108 +149,73 @@ export default function HackathonsPage() {
         </p>
       </header>
 
-      {/* Main Content Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* Hero: Active Event Banner */}
+      <div className="bg-[#262626] border border-[#353535] rounded-xl p-8 relative overflow-hidden shadow-lg hover:border-[#4d4d4d] transition-colors duration-300">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#D2042D]/15 to-transparent rounded-full blur-3xl pointer-events-none" />
         
-        {/* Left Column: Hero & Grids */}
-        <div className="lg:col-span-8 flex flex-col gap-8">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+          <div className="space-y-4">
+            <span className="text-[10px] font-bold tracking-widest text-[#D2042D] uppercase bg-[#D2042D]/10 px-3 py-1 rounded-full border border-[#D2042D]/20">Active Global Hackathon</span>
+            <h2 className="text-2xl font-extrabold text-[#F5F5F5] leading-tight font-sans">The Generative AI Breakthrough</h2>
+            <p className="text-sm text-[#A3A3A3] max-w-2xl leading-relaxed">
+              Build autonomous AI agents or fine-tune models to solve real-world productivity hurdles. Top submissions will be reviewed by venture partners and highlighted in recruiter directories.
+            </p>
+            <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-[#A3A3A3]">
+              <div className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> <span>Oct 15 - Oct 17, 2026</span></div>
+              <div className="flex items-center gap-1.5"><Award className="w-4 h-4" /> <span>$25,000 Cash Pool + Cloud Credits</span></div>
+            </div>
+          </div>
           
-          {/* Featured Event Hero */}
-          <section className="relative bg-[#262626] border border-[#353535] rounded-xl flex flex-col justify-end min-h-[380px] overflow-hidden group p-6 md:p-8">
-            {/* Background Image with Dark Overlay */}
-            <div className="absolute inset-0 z-0">
-              <div className="absolute inset-0 bg-gradient-to-t from-[#131313] via-[#131313]/70 to-[#131313]/10 z-10"></div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img 
-                className="w-full h-full object-cover opacity-40 group-hover:scale-102 transition-transform duration-700 ease-out" 
-                alt="AI Neural Network Visual" 
-                src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200" 
-              />
-            </div>
+          <button 
+            onClick={handleRegister}
+            disabled={isRegistered}
+            className="px-8 py-3.5 rounded bg-[#D2042D] hover:bg-[#D2042D]/90 text-white font-bold text-sm shadow-lg tracking-wide transition-all active:scale-95 duration-150 shrink-0 self-start lg:self-center disabled:bg-[#353535] disabled:text-[#A3A3A3] disabled:cursor-default"
+          >
+            {isRegistered ? "Registered" : "Register Event"}
+          </button>
+        </div>
+      </div>
 
-            {/* Hero content */}
-            <div className="relative z-20 max-w-2xl">
-              <span className="inline-block text-[10px] uppercase font-bold tracking-widest text-[#D2042D] border border-[#D2042D]/40 px-2 py-0.5 rounded bg-[#131313]/60 backdrop-blur mb-3">
-                Featured Event
-              </span>
-              <h2 className="text-2xl md:text-3xl font-bold text-[#F5F5F5] mb-3 tracking-tight">The Generative AI Breakthrough</h2>
-              <p className="text-xs md:text-sm text-[#A3A3A3] mb-5 leading-relaxed max-w-xl">
-                Push the boundaries of large language models. Build enterprise-grade generative applications and compete for industry recognition.
-              </p>
-              
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-6 text-xs text-[#ecc154] font-semibold">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-[#D2042D]" />
-                  <span>Oct 15 - Oct 17</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Award className="w-4 h-4 text-[#D2042D]" />
-                  <span>$10,000 + AI Certification</span>
-                </div>
-              </div>
-
-              <button 
-                onClick={handleRegister}
-                disabled={isRegistered}
-                className={`px-6 py-2.5 font-bold text-xs rounded transition-all active:scale-[0.98] ${
-                  isRegistered 
-                    ? "bg-[#064e3b] text-[#34d399] border border-[#059669]/50 flex items-center gap-2 cursor-default" 
-                    : "bg-[#D2042D] hover:bg-[#D2042D]/90 text-white"
-                }`}
-              >
-                {isRegistered ? (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Registered</span>
-                  </>
-                ) : (
-                  "Register Now"
-                )}
-              </button>
-            </div>
-          </section>
-
-          {/* Upcoming Hackathons Grid */}
-          <section className="space-y-4">
-            <h2 className="text-xl font-bold text-[#F5F5F5] tracking-tight">Upcoming Challenges</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {challenges.map((challenge) => (
-                <div 
-                  key={challenge.id} 
-                  className="bg-[#262626] border border-[#353535] rounded-xl p-5 hover:border-[#D2042D]/40 transition-colors flex flex-col h-full"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-base font-bold text-[#F5F5F5]">{challenge.title}</h3>
+      {/* Main Content Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* Left Column: Challenges Feed */}
+        <section className="lg:col-span-8 space-y-6">
+          <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-2 border-b border-[#353535] pb-2">Upcoming Challenges</h3>
+          
+          <div className="flex flex-col gap-4">
+            {challenges.map((challenge) => (
+              <div key={challenge.id} className="bg-[#262626] border border-[#353535] rounded-xl p-6 hover:border-[#4d4d4d] transition-colors duration-300 flex flex-col md:flex-row justify-between gap-6">
+                <div className="flex gap-4">
+                  <div className="w-12 h-12 bg-[#171717] rounded-lg border border-[#353535] flex items-center justify-center shrink-0">
                     {challenge.icon}
                   </div>
-                  <p className="text-xs text-[#A3A3A3] mb-5 leading-relaxed flex-grow">
-                    {challenge.description}
-                  </p>
-                  
-                  <div className="border-t border-[#353535] pt-4 mt-auto space-y-3">
-                    <div className="flex flex-wrap gap-1.5">
+                  <div className="space-y-2">
+                    <h4 className="text-lg font-bold text-[#F5F5F5]">{challenge.title}</h4>
+                    <p className="text-xs text-[#A3A3A3] leading-relaxed max-w-xl">{challenge.description}</p>
+                    <div className="flex flex-wrap gap-2 pt-1">
                       {challenge.tags.map((tag) => (
-                        <span 
-                          key={tag} 
-                          className="text-[9px] uppercase tracking-wider font-extrabold bg-[#171717] border border-[#353535] text-[#A3A3A3] px-2 py-0.5 rounded"
-                        >
+                        <span key={tag} className="text-[10px] font-semibold px-2.5 py-0.5 bg-[#171717] text-[#A3A3A3] rounded border border-[#353535]">
                           {tag}
                         </span>
                       ))}
                     </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-[#ecc154] font-bold">{challenge.prize}</span>
-                      <button className="text-[#D2042D] hover:text-[#D2042D]/80 font-bold flex items-center gap-1">
-                        <span>Details</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </section>
-        </div>
+                
+                <div className="flex md:flex-col justify-between items-end shrink-0 text-right">
+                  <div>
+                    <span className="text-[10px] font-bold text-[#ecc154] uppercase tracking-wider block">Reward</span>
+                    <span className="text-sm font-bold text-[#F5F5F5]">{challenge.prize}</span>
+                  </div>
+                  <button className="text-xs font-bold text-[#D2042D] hover:underline flex items-center gap-1 group/link mt-2 md:mt-0">
+                    Learn More <ArrowRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Right Sidebar: My Registrations & Past Achievements */}
         <aside className="lg:col-span-4 flex flex-col gap-6">
@@ -196,22 +226,59 @@ export default function HackathonsPage() {
               <Users className="w-4 h-4 text-[#D2042D]" />
               My Registrations
             </h3>
-            <ul className="space-y-4">
-              {registrations.map((reg) => (
-                <li key={reg.id} className="flex items-center justify-between group cursor-pointer">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-xs font-bold text-[#F5F5F5] group-hover:text-[#D2042D] transition-colors">
-                      {reg.title}
-                    </span>
-                    <span className="text-[10px] text-[#A3A3A3]">
-                      {reg.status}
-                    </span>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-[#353535] group-hover:text-[#D2042D] transition-colors" />
-                </li>
-              ))}
-            </ul>
+            {registrations.length === 0 ? (
+              <p className="text-xs text-[#A3A3A3] italic py-2">Not registered for any hackathons.</p>
+            ) : (
+              <ul className="space-y-4">
+                {registrations.map((reg) => (
+                  <li 
+                    key={reg.id} 
+                    onClick={() => setSelectedHackathonId(reg.id)}
+                    className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${selectedHackathonId === reg.id ? "bg-[#D2042D]/10 border border-[#D2042D]/30" : "hover:bg-[#1a1a1a]"}`}
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs font-bold text-[#F5F5F5]">
+                        {reg.title}
+                      </span>
+                      <span className="text-[10px] text-[#A3A3A3]">
+                        {reg.status}
+                      </span>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-[#A3A3A3]" />
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
+
+          {/* Leaderboard Standings Card */}
+          {selectedHackathonId && (
+            <div className="bg-[#262626] border border-[#353535] p-5 rounded-xl">
+              <h3 className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-wider mb-4 border-b border-[#353535] pb-2 flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-[#ecc154]" />
+                Standings Leaderboard
+              </h3>
+              {loadingLeaderboard ? (
+                <div className="py-8 flex justify-center items-center">
+                  <Loader2 className="w-5 h-5 animate-spin text-[#D2042D]" />
+                </div>
+              ) : leaderboard.length === 0 ? (
+                <p className="text-xs text-[#A3A3A3] italic text-center py-4">No team rankings posted yet.</p>
+              ) : (
+                <ul className="space-y-3 font-sans">
+                  {leaderboard.map((team, idx) => (
+                    <li key={team.team_id || idx} className="flex items-center justify-between p-2.5 bg-[#171717] border border-[#353535] rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-[#D2042D] font-mono">#{team.rank || (idx + 1)}</span>
+                        <span className="text-xs font-bold text-white truncate max-w-[120px]">{team.team_name}</span>
+                      </div>
+                      <span className="text-xs font-bold text-[#ecc154] font-mono">{Math.round(team.composite_score || team.pitch_score || 80)} pts</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {/* Past Achievements */}
           <div className="bg-[#262626] border border-[#353535] p-5 rounded-xl">
@@ -246,7 +313,6 @@ export default function HackathonsPage() {
           </div>
           
         </aside>
-
       </div>
     </div>
   );

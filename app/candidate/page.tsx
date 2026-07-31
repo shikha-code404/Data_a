@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { mockTalentScore, mockJobs, mockRoadmapSteps } from "@/lib/mock-data";
 import { RadarScoreChart } from "@/components/RadarScoreChart";
-import { getCandidateProfileData, uploadResume } from "./actions";
+import { getCandidateProfileData, uploadResume, getCandidateJobMatches, generateTalentScoreAction } from "./actions";
 import { ResumeData } from "@/lib/resume/parser";
 import {
   Sparkles,
@@ -49,11 +49,18 @@ export default function CandidateDashboard() {
     githubData: unknown;
     resumeData: ResumeData | null;
     resumeNeedsReview: boolean;
+    talentScore: any;
+    careerRoadmap: any;
+    salaryEstimate: any;
   } | null>(null);
   
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [roadmapSteps, setRoadmapSteps] = useState<any[]>([]);
+  const [isGeneratingScore, setIsGeneratingScore] = useState(false);
 
   // Load profile data on mount
   const loadProfile = async () => {
@@ -69,13 +76,49 @@ export default function CandidateDashboard() {
         githubData: res.githubData ?? null,
         resumeData: res.resumeData ?? null,
         resumeNeedsReview: res.resumeNeedsReview ?? false,
+        talentScore: res.talentScore ?? null,
+        careerRoadmap: res.careerRoadmap ?? null,
+        salaryEstimate: res.salaryEstimate ?? null,
       });
+
+      // Map roadmap steps if available
+      if (res.careerRoadmap && res.careerRoadmap.career_roadmap) {
+        const mapped = res.careerRoadmap.career_roadmap.map((step: any, idx: number) => ({
+          id: `step-${idx}`,
+          title: step.stage || "Next Phase",
+          description: Array.isArray(step.milestones) ? step.milestones.join(". ") : (step.milestones || ""),
+          timeEstimate: step.timeframe || "1-3 months",
+          status: idx === 0 ? "in_progress" : "next"
+        }));
+        setRoadmapSteps(mapped);
+      }
+
+      // Fetch real jobs
+      const jobsRes = await getCandidateJobMatches();
+      if (jobsRes.success && jobsRes.jobs) {
+        setJobs(jobsRes.jobs);
+      }
     }
     setIsLoadingData(false);
   };
 
+  const handleGenerateScore = async () => {
+    setIsGeneratingScore(true);
+    try {
+      const res = await generateTalentScoreAction();
+      if (res.success) {
+        await loadProfile();
+      } else {
+        alert(res.error || "Failed to generate talent score.");
+      }
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setIsGeneratingScore(false);
+    }
+  };
+
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -220,58 +263,103 @@ export default function CandidateDashboard() {
             
             {/* Talent Score Analytics Card */}
             <section className="bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col">
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex items-center gap-2 text-[#F5F5F5]">
-                  <Award className="w-6 h-6 text-[#D2042D]" />
-                  <h2 className="text-lg font-bold">Talent Score Analytics</h2>
-                </div>
-                <div className="text-right">
-                  <div className="text-3xl font-extrabold text-[#D2042D] leading-none">
-                    {mockTalentScore.overall}
-                    <span className="text-lg text-[#A3A3A3] font-normal">/100</span>
-                  </div>
-                  <div className="text-[10px] font-bold text-[#ecc154] tracking-wider mt-1">TOP 2% GLOBALLY</div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center bg-[#171717] rounded-lg p-6 border border-[#353535]">
-                {/* Radar Chart Representation (Using Recharts but styled with brand variables) */}
-                <div style={{ '--primary': '#D2042D', '--secondary': '#D2042D' } as React.CSSProperties} className="relative w-full aspect-square max-w-[280px] mx-auto flex items-center justify-center">
-                  <RadarScoreChart data={mockTalentScore.subScores} />
-                </div>
-                
-                {/* Key Strengths */}
-                <div className="flex flex-col gap-6">
-                  <h3 className="text-sm font-bold text-[#F5F5F5]">Key Strengths</h3>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex justify-between items-center text-xs font-semibold">
-                      <span className="text-[#A3A3A3]">Problem Solving</span>
-                      <span className="text-[#F5F5F5]">95%</span>
+              {(() => {
+                const talentScoreObj = profileData?.talentScore;
+                const overallScore = talentScoreObj?.overall_score || talentScoreObj?.overallScore || null;
+                const scoresObj = talentScoreObj?.scores || talentScoreObj?.breakdown || null;
+
+                const radarData = scoresObj ? (
+                  scoresObj.coding_ability !== undefined ? [
+                    { category: "Coding Ability", value: scoresObj.coding_ability || 0 },
+                    { category: "Project Quality", value: scoresObj.project_quality || 0 },
+                    { category: "Leadership", value: scoresObj.leadership || 0 },
+                    { category: "Problem Solving", value: scoresObj.problem_solving || 0 },
+                    { category: "Innovation", value: scoresObj.innovation || 0 },
+                    { category: "Community Participation", value: scoresObj.community_participation || 0 },
+                    { category: "Technical Consistency", value: scoresObj.technical_consistency || 0 }
+                  ] : [
+                    { category: "Coding Ability", value: scoresObj.codeQuality || 0 },
+                    { category: "Project Quality", value: scoresObj.skillFit || 0 },
+                    { category: "Leadership", value: 70 },
+                    { category: "Problem Solving", value: 80 },
+                    { category: "Innovation", value: 75 },
+                    { category: "Community Participation", value: 65 },
+                    { category: "Technical Consistency", value: 85 }
+                  ]
+                ) : [];
+
+                return (
+                  <>
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="flex items-center gap-2 text-[#F5F5F5]">
+                        <Award className="w-6 h-6 text-[#D2042D]" />
+                        <h2 className="text-lg font-bold">Talent Score Analytics</h2>
+                      </div>
+                      {overallScore !== null && (
+                        <div className="text-right">
+                          <div className="text-3xl font-extrabold text-[#D2042D] leading-none">
+                            {overallScore}
+                            <span className="text-lg text-[#A3A3A3] font-normal">/100</span>
+                          </div>
+                          <div className="text-[10px] font-bold text-[#ecc154] tracking-wider mt-1">
+                            {overallScore >= 90 ? "TOP 2% GLOBALLY" : overallScore >= 80 ? "TOP 10% GLOBALLY" : "VERIFIED COMPETENCY"}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="w-full h-2 bg-[#353535] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#D2042D] rounded-full" style={{ width: "95%" }}></div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex justify-between items-center text-xs font-semibold">
-                      <span className="text-[#A3A3A3]">Coding Ability</span>
-                      <span className="text-[#F5F5F5]">92%</span>
-                    </div>
-                    <div className="w-full h-2 bg-[#353535] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#D2042D] rounded-full" style={{ width: "92%" }}></div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex justify-between items-center text-xs font-semibold">
-                      <span className="text-[#A3A3A3]">Technical Consistency</span>
-                      <span className="text-[#F5F5F5]">88%</span>
-                    </div>
-                    <div className="w-full h-2 bg-[#353535] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#D2042D] rounded-full" style={{ width: "88%" }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                    
+                    {overallScore === null ? (
+                      <div className="flex flex-col items-center justify-center py-10 text-center gap-4 bg-[#171717] rounded-lg p-6 border border-[#353535]">
+                        <Award className="w-12 h-12 text-[#D2042D]/60" />
+                        <div>
+                          <h3 className="text-sm font-bold text-white">Generate your AI Talent Score</h3>
+                          <p className="text-xs text-[#A3A3A3] mt-1 max-w-md">Compute a comprehensive overall competency score using our AI agent analyzing your GitHub and resume.</p>
+                        </div>
+                        <button 
+                          onClick={handleGenerateScore}
+                          disabled={isGeneratingScore}
+                          className="px-6 py-2.5 bg-[#D2042D] hover:bg-[#D2042D]/90 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 inline-flex items-center gap-2"
+                        >
+                          {isGeneratingScore ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Analyzing repositories...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>Compute Talent Score</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center bg-[#171717] rounded-lg p-6 border border-[#353535]">
+                        {/* Radar Chart Representation (Using Recharts but styled with brand variables) */}
+                        <div style={{ '--primary': '#D2042D', '--secondary': '#D2042D' } as React.CSSProperties} className="relative w-full aspect-square max-w-[280px] mx-auto flex items-center justify-center">
+                          <RadarScoreChart data={radarData} />
+                        </div>
+                        
+                        {/* Key Strengths */}
+                        <div className="flex flex-col gap-6">
+                          <h3 className="text-sm font-bold text-[#F5F5F5]">Key Strengths</h3>
+                          {radarData.slice(0, 3).map((d: any) => (
+                            <div key={d.category} className="flex flex-col gap-2">
+                              <div className="flex justify-between items-center text-xs font-semibold">
+                                <span className="text-[#A3A3A3]">{d.category}</span>
+                                <span className="text-[#F5F5F5]">{d.value}%</span>
+                              </div>
+                              <div className="w-full h-2 bg-[#353535] rounded-full overflow-hidden">
+                                <div className="h-full bg-[#D2042D] rounded-full" style={{ width: `${d.value}%` }}></div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </section>
 
             {/* AI Resume Parsing & Extraction Card */}
@@ -422,76 +510,81 @@ export default function CandidateDashboard() {
                 <TrendingUp className="w-5 h-5 text-[#D2042D]" />
                 <h2 className="text-lg font-bold">Top AI-Generated Job Matches</h2>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {mockJobs.map((job) => {
-                  const isHighMatch = job.matchScore >= 90;
-                  const isMedMatch = job.matchScore >= 80 && job.matchScore < 90;
-                  const badgeColorClass = isHighMatch 
-                    ? "bg-[#19a566]/20 text-[#61dd98]" 
-                    : isMedMatch 
-                      ? "bg-[#b18c22]/20 text-[#ecc154]" 
-                      : "bg-[#353535] text-[#A3A3A3]";
-                  const badgeDotClass = isHighMatch 
-                    ? "bg-[#61dd98]" 
-                    : isMedMatch 
-                      ? "bg-[#ecc154]" 
-                      : "bg-[#A3A3A3]";
+                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {jobs.length === 0 ? (
+                  <div className="col-span-3 py-10 text-center text-[#A3A3A3] text-xs bg-[#262626] border border-[#353535] rounded-xl w-full">
+                    No job matches found. Complete your profile or sync GitHub to match with open jobs.
+                  </div>
+                ) : (
+                  jobs.slice(0, 3).map((job) => {
+                    const isHighMatch = job.matchScore >= 90;
+                    const isMedMatch = job.matchScore >= 80 && job.matchScore < 90;
+                    const badgeColorClass = isHighMatch 
+                      ? "bg-[#19a566]/20 text-[#61dd98]" 
+                      : isMedMatch 
+                        ? "bg-[#b18c22]/20 text-[#ecc154]" 
+                        : "bg-[#353535] text-[#A3A3A3]";
+                    const badgeDotClass = isHighMatch 
+                      ? "bg-[#61dd98]" 
+                      : isMedMatch 
+                        ? "bg-[#ecc154]" 
+                        : "bg-[#A3A3A3]";
 
-                  return (
-                    <div key={job.id} className="bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col justify-between hover:border-[#D2042D] transition-colors hover:bg-[#2b2b2b]">
-                      <div>
-                        <div className="flex justify-between items-start mb-3">
-                          <h3 className="text-base font-bold text-[#F5F5F5] leading-tight pr-2">{job.title}</h3>
-                          <span className={`font-semibold text-xs px-2.5 py-1 rounded-full whitespace-nowrap flex items-center gap-1.5 ${badgeColorClass}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${badgeDotClass}`}></span> 
-                            {job.matchScore}% Match
-                          </span>
-                        </div>
-                        <p className="text-xs font-semibold text-[#A3A3A3] mb-4">{job.company}</p>
-                        
-                        <div className="flex flex-col gap-2 mb-4 text-xs text-[#A3A3A3]">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-3.5 h-3.5 text-[#A3A3A3]" /> 
-                            <span>{job.location}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Briefcase className="w-3.5 h-3.5 text-[#A3A3A3]" /> 
-                            <span>{job.type}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="w-3.5 h-3.5 text-[#A3A3A3]" /> 
-                            <span>{job.salary}</span>
-                          </div>
-                        </div>
-                        <p className="text-xs text-[#A3A3A3] line-clamp-2 mb-4">{job.description}</p>
-                        
-                        <div className="flex flex-wrap gap-2 mb-6">
-                          {job.badges.map((tag) => (
-                            <span key={tag} className="bg-[#353535] text-[#F5F5F5] text-[10px] font-semibold px-2 py-0.5 rounded">
-                              {tag}
+                    return (
+                      <div key={job.id} className="bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col justify-between hover:border-[#D2042D] transition-colors hover:bg-[#2b2b2b]">
+                        <div>
+                          <div className="flex justify-between items-start mb-3">
+                            <h3 className="text-base font-bold text-[#F5F5F5] leading-tight pr-2">{job.title}</h3>
+                            <span className={`font-semibold text-xs px-2.5 py-1 rounded-full whitespace-nowrap flex items-center gap-1.5 ${badgeColorClass}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${badgeDotClass}`}></span> 
+                              {job.matchScore}% Match
                             </span>
-                          ))}
+                          </div>
+                          <p className="text-xs font-semibold text-[#A3A3A3] mb-4">{job.company}</p>
+                          
+                          <div className="flex flex-col gap-2 mb-4 text-xs text-[#A3A3A3]">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-3.5 h-3.5 text-[#A3A3A3]" /> 
+                              <span>{job.location}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Briefcase className="w-3.5 h-3.5 text-[#A3A3A3]" /> 
+                              <span>{job.type}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="w-3.5 h-3.5 text-[#A3A3A3]" /> 
+                              <span>{job.salary}</span>
+                            </div>
+                          </div>
+                          <p className="text-xs text-[#A3A3A3] line-clamp-2 mb-4">{job.description}</p>
+                          
+                          <div className="flex flex-wrap gap-2 mb-6">
+                            {job.badges.map((tag: string) => (
+                              <span key={tag} className="bg-[#353535] text-[#F5F5F5] text-[10px] font-semibold px-2 py-0.5 rounded">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2 mt-auto">
+                          <button 
+                            onClick={() => router.push(`/candidate/jobs`)}
+                            className="flex-1 bg-transparent border border-[#353535] text-[#F5F5F5] hover:bg-[#353535] transition-colors text-xs font-bold rounded-lg py-2 flex justify-center items-center"
+                          >
+                            View Details
+                          </button>
+                          <button 
+                            onClick={() => router.push(`/candidate/jobs`)}
+                            className="flex-1 bg-[#D2042D] text-white hover:bg-[#D2042D]/90 transition-colors text-xs font-bold rounded-lg py-2 flex justify-center items-center gap-1"
+                          >
+                            Apply Now <ArrowUpRight className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
-                      
-                      <div className="flex gap-2 mt-auto">
-                        <button 
-                          onClick={() => router.push(`/candidate/jobs`)}
-                          className="flex-1 bg-transparent border border-[#353535] text-[#F5F5F5] hover:bg-[#353535] transition-colors text-xs font-bold rounded-lg py-2 flex justify-center items-center"
-                        >
-                          View Details
-                        </button>
-                        <button 
-                          onClick={() => router.push(`/candidate/jobs`)}
-                          className="flex-1 bg-[#D2042D] text-white hover:bg-[#D2042D]/90 transition-colors text-xs font-bold rounded-lg py-2 flex justify-center items-center gap-1"
-                        >
-                          Apply Now <ArrowUpRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </section>
           </div>
@@ -510,26 +603,32 @@ export default function CandidateDashboard() {
                 {/* Timeline Line */}
                 <div className="absolute left-[11px] top-2 bottom-6 w-[2px] bg-[#353535] rounded-full"></div>
                 
-                {mockRoadmapSteps.map((step) => {
-                  const isInProgress = step.status === "in_progress";
-                  return (
-                    <div key={step.id} className="flex gap-4 relative z-10">
-                      <div className={`w-6 h-6 rounded-full bg-[#131313] border-2 flex-shrink-0 flex items-center justify-center mt-1 ${isInProgress ? "border-[#D2042D]" : "border-[#353535]"}`}>
-                        {isInProgress && <div className="w-2 h-2 rounded-full bg-[#D2042D]"></div>}
-                      </div>
-                      <div className="flex flex-col gap-1 w-full text-xs">
-                        <div className="flex justify-between items-start gap-2">
-                          <h4 className="font-bold text-[#F5F5F5] text-sm leading-snug">{step.title}</h4>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${isInProgress ? "bg-[#b18c22]/20 text-[#ecc154]" : "bg-[#353535] text-[#F5F5F5] border border-[#353535]"}`}>
-                            {isInProgress ? "In Progress" : "Up Next"}
-                          </span>
+                {roadmapSteps.length === 0 ? (
+                  <div className="py-10 text-center text-[#A3A3A3] text-xs">
+                    No roadmap steps. Generate your Talent Score to receive recommendations.
+                  </div>
+                ) : (
+                  roadmapSteps.map((step) => {
+                    const isInProgress = step.status === "in_progress";
+                    return (
+                      <div key={step.id} className="flex gap-4 relative z-10">
+                        <div className={`w-6 h-6 rounded-full bg-[#131313] border-2 flex-shrink-0 flex items-center justify-center mt-1 ${isInProgress ? "border-[#D2042D]" : "border-[#353535]"}`}>
+                          {isInProgress && <div className="w-2 h-2 rounded-full bg-[#D2042D]"></div>}
                         </div>
-                        <p className="text-[#A3A3A3] mt-1 leading-relaxed">{step.description}</p>
-                        <span className="text-[10px] text-[#A3A3A3] mt-1">Est: {step.timeEstimate}</span>
+                        <div className="flex flex-col gap-1 w-full text-xs">
+                          <div className="flex justify-between items-start gap-2">
+                            <h4 className="font-bold text-[#F5F5F5] text-sm leading-snug">{step.title}</h4>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${isInProgress ? "bg-[#b18c22]/20 text-[#ecc154]" : "bg-[#353535] text-[#F5F5F5] border border-[#353535]"}`}>
+                              {isInProgress ? "In Progress" : "Up Next"}
+                            </span>
+                          </div>
+                          <p className="text-[#A3A3A3] mt-1 leading-relaxed">{step.description}</p>
+                          <span className="text-[10px] text-[#A3A3A3] mt-1">Est: {step.timeEstimate}</span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
               {/* Info Box */}

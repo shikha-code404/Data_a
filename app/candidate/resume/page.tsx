@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { 
   FileText, 
   Upload, 
@@ -91,6 +91,9 @@ const topFirms = [
   { id: "stripe", label: "Stripe", letter: "S" }
 ];
 
+import { useAuth } from "@/lib/auth-context";
+import { getCandidateProfileData } from "../actions";
+
 export default function ResumePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -98,6 +101,20 @@ export default function ResumePage() {
   const [parsedData, setParsedData] = useState<ResumeData>(initialResumeData);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("modern");
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const { candidate_id } = useAuth();
+
+  const loadResumeData = async () => {
+    const res = await getCandidateProfileData();
+    if (res.success && res.resumeData) {
+      setParsedData(res.resumeData as ResumeData);
+    }
+  };
+
+  useEffect(() => {
+    if (candidate_id) {
+      loadResumeData();
+    }
+  }, [candidate_id]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -136,9 +153,31 @@ export default function ResumePage() {
     }
   };
 
-  const handleDownload = () => {
-    // Simple window print trigger for the resume preview
-    window.print();
+  const handleDownload = async () => {
+    if (!candidate_id) return;
+    setUploadStatus("Generating ATS-optimized resume...");
+    try {
+      const templateName = selectedTemplate === "modern" ? "Modern" : "Minimal";
+      const res = await fetch("/api/resume/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidate_id,
+          template: templateName,
+          force_fresh: true
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.resume_id) {
+        setUploadStatus("Resume generated successfully! Opening print window...");
+        window.open(`/api/resume/${data.resume_id}/download`, "_blank");
+      } else {
+        setUploadStatus(`Failed to generate resume: ${data.error || "Unknown error"}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setUploadStatus(`Error: ${err.message}`);
+    }
   };
 
   return (

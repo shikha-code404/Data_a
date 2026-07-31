@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Sparkles,
   Loader2,
@@ -44,101 +44,9 @@ interface JobItem {
   location: string;
 }
 
-const initialJobsList: JobItem[] = [
-  {
-    id: "job-1",
-    req_id: "REQ-2024-082",
-    title: "Senior Cloud Architect",
-    company: "HireSpark Platforms",
-    status: "Active",
-    candidatesCount: 42,
-    interviewingCount: 7,
-    pipelineWidths: { applied: 40, screening: 25, interviewing: 15, offered: 20 },
-    hiringTeamName: "Sarah Miller",
-    hiringTeamInitials: "SM",
-    postedDate: "2d ago",
-    aiMatchRating: "High",
-    aiMatchPercentage: 94,
-    description: "Responsible for microservices infrastructure orchestrations, cloud architecture scaling, and system integrity.",
-    skills: ["Go", "Kubernetes", "Redis", "AWS"],
-    location: "London, UK (Hybrid)"
-  },
-  {
-    id: "job-2",
-    req_id: "REQ-2024-079",
-    title: "VP of Engineering",
-    company: "HireSpark Platforms",
-    status: "Urgent",
-    candidatesCount: 12,
-    interviewingCount: 4,
-    pipelineWidths: { applied: 20, screening: 40, interviewing: 30, offered: 10 },
-    hiringTeamName: "David Jones",
-    hiringTeamInitials: "DJ",
-    postedDate: "5d ago",
-    aiMatchRating: "High",
-    aiMatchPercentage: 88,
-    description: "Technical leadership, staff mentorship, scaling architectural roadmap across multi-tenant cloud ecosystems.",
-    skills: ["Leadership", "System Design", "Cloud Architecture"],
-    location: "Remote"
-  },
-  {
-    id: "job-3",
-    req_id: "REQ-2024-091",
-    title: "Product Designer (L5)",
-    company: "HireSpark Platforms",
-    status: "Draft",
-    candidatesCount: 0,
-    interviewingCount: 0,
-    pipelineWidths: { applied: 0, screening: 0, interviewing: 0, offered: 100 },
-    hiringTeamName: "Elena Rodriguez",
-    hiringTeamInitials: "ER",
-    hiringTeamAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-    postedDate: "-",
-    aiMatchRating: "N/A",
-    description: "Designing dynamic components, layouts, custom vector visualizer styling, and premium aesthetics.",
-    skills: ["Figma", "UI Design", "CSS Motion"],
-    location: "San Francisco, CA"
-  },
-  {
-    id: "job-4",
-    req_id: "REQ-2024-055",
-    title: "DevOps Lead",
-    company: "HireSpark Platforms",
-    status: "On Hold",
-    candidatesCount: 68,
-    interviewingCount: 12,
-    pipelineWidths: { applied: 50, screening: 30, interviewing: 10, offered: 10 },
-    hiringTeamName: "Tom Baker",
-    hiringTeamInitials: "TB",
-    postedDate: "12d ago",
-    aiMatchRating: "Fair",
-    aiMatchPercentage: 72,
-    description: "Managing CI/CD build scripts, server deployment workflows, and database migration scaling pipelines.",
-    skills: ["Docker", "Terraform", "CI/CD", "AWS"],
-    location: "Remote"
-  },
-  {
-    id: "job-5",
-    req_id: "REQ-2024-062",
-    title: "Staff QA Engineer",
-    company: "HireSpark Platforms",
-    status: "Active",
-    candidatesCount: 25,
-    interviewingCount: 5,
-    pipelineWidths: { applied: 30, screening: 20, interviewing: 20, offered: 30 },
-    hiringTeamName: "Sarah Miller",
-    hiringTeamInitials: "SM",
-    postedDate: "1w ago",
-    aiMatchRating: "High",
-    aiMatchPercentage: 82,
-    description: "Writing automation scripts, testing AST structure changes, and executing integrations audit tests.",
-    skills: ["Python", "Selenium", "Jest", "Playwright"],
-    location: "London, UK (Hybrid)"
-  }
-];
-
 export default function RecruiterJobsPage() {
-  const [jobs, setJobs] = useState<JobItem[]>(initialJobsList);
+  const [jobs, setJobs] = useState<JobItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filterQuery, setFilterQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | "templates" | "archived">("all");
 
@@ -156,6 +64,43 @@ export default function RecruiterJobsPage() {
   const [selectedJobMatches, setSelectedJobMatches] = useState<any[] | null>(null);
   const [activeJobTitle, setActiveJobTitle] = useState("");
 
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/jobs");
+      const data = await res.json();
+      if (data.success && Array.isArray(data.jobs)) {
+        const mapped: JobItem[] = data.jobs.map((j: any) => ({
+          id: j.id,
+          req_id: `REQ-2026-${j.id.slice(0, 3).toUpperCase()}`,
+          title: j.title || "Untitled Position",
+          company: j.company || "Partner Company",
+          status: "Active",
+          candidatesCount: 5,
+          interviewingCount: 1,
+          pipelineWidths: { applied: 40, screening: 25, interviewing: 15, offered: 20 },
+          hiringTeamName: "Sarah Miller",
+          hiringTeamInitials: "SM",
+          postedDate: "Just now",
+          aiMatchRating: "High",
+          aiMatchPercentage: 85,
+          description: j.description || "",
+          skills: j.skills_required || [],
+          location: j.location || "Remote"
+        }));
+        setJobs(mapped);
+      }
+    } catch (e) {
+      console.error("Failed to fetch jobs:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
   const handlePostJob = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) return;
@@ -170,27 +115,7 @@ export default function RecruiterJobsPage() {
       );
 
       if (res.success && res.job) {
-        const skillsArray = skills.split(",").map(s => s.trim()).filter(Boolean);
-        const newJob: JobItem = {
-          id: res.job.id,
-          req_id: `REQ-2026-${Math.floor(100 + Math.random() * 900)}`,
-          title: res.job.title,
-          company: res.job.company || "HireSpark Platforms",
-          status: "Active",
-          candidatesCount: 0,
-          interviewingCount: 0,
-          pipelineWidths: { applied: 0, screening: 0, interviewing: 0, offered: 100 },
-          hiringTeamName: "Sarah Miller",
-          hiringTeamInitials: "SM",
-          postedDate: "Just now",
-          aiMatchRating: "High",
-          aiMatchPercentage: 85,
-          description: res.job.description,
-          skills: skillsArray.length > 0 ? skillsArray : ["React", "TypeScript"],
-          location: res.job.location || "Remote"
-        };
-
-        setJobs([newJob, ...jobs]);
+        await fetchJobs();
         setIsPostModalOpen(false);
 
         // Pop up the matching results automatically
@@ -366,8 +291,22 @@ export default function RecruiterJobsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#353534]/50">
-              {filteredJobs.map((job) => (
-                <tr key={job.id} className="hover:bg-[#2d2d30]/20 transition-all group">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-10 text-center text-[#A3A3A3]">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-[#D2042D] mb-2" />
+                    <span>Loading jobs...</span>
+                  </td>
+                </tr>
+              ) : filteredJobs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-10 text-center text-[#A3A3A3]">
+                    <span>No job postings found. Click "Post New Job" to create one.</span>
+                  </td>
+                </tr>
+              ) : (
+                filteredJobs.map((job) => (
+                  <tr key={job.id} className="hover:bg-[#2d2d30]/20 transition-all group">
                   <td className="px-6 py-5">
                     <div className="flex flex-col">
                       <span className="font-bold text-white group-hover:text-[#D2042D] transition-colors cursor-pointer text-sm">
@@ -452,7 +391,7 @@ export default function RecruiterJobsPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

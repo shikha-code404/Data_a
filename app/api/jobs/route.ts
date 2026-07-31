@@ -135,3 +135,28 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export async function GET(req: Request) {
+  try {
+    const supabase = await createServerDbClient();
+    const { data: jobs, error: selectError } = await supabase
+      .from("job_postings")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (selectError) {
+      throw new Error(`Failed to fetch jobs from database: ${selectError.message}`);
+    }
+
+    return NextResponse.json({
+      success: true,
+      jobs: jobs || [],
+    });
+  } catch (err: any) {
+    console.error("API GET /api/jobs failed:", err);
+    return NextResponse.json(
+      { success: false, error: err.message },
+      { status: 500 }
+    );
+  }
+}

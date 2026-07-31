@@ -27,17 +27,7 @@ interface TeamMember {
   weight: number;
 }
 
-const mockTeamDetails: Record<string, TeamMember[]> = {
-  "Alpha Bytes": [
-    { name: "Marcus Chen", role: "Frontend Lead", commits: 22, linesAdded: 1450, weight: 45 },
-    { name: "Elena Rostova", role: "Full Stack Eng", commits: 18, linesAdded: 980, weight: 35 },
-    { name: "Alex Rivera", role: "ML Engineer", commits: 8, linesAdded: 340, weight: 20 }
-  ],
-  "Beta Builders": [
-    { name: "Sarah Jenkins", role: "UI Designer", commits: 14, linesAdded: 600, weight: 60 },
-    { name: "David Kim", role: "Backend Developer", commits: 11, linesAdded: 820, weight: 40 }
-  ]
-};
+
 
 export default function RecruiterHackathonsPage() {
   const [hackathonId, setHackathonId] = useState<string>("");
@@ -80,26 +70,19 @@ export default function RecruiterHackathonsPage() {
   const getTeamMembers = () => {
     if (!selectedTeam) return [];
     
-    // If the database returns members for the team, use them
     if (selectedTeam.members && selectedTeam.members.length > 0) {
       return selectedTeam.members.map((m: any, idx: number) => {
-        // Try to find matching mock details to enrich with commits and lines
-        const mockMembers = mockTeamDetails[selectedTeam.team_name] || [];
-        const mock = mockMembers.find((mm: any) => mm.name.toLowerCase() === m.full_name.toLowerCase()) 
-                     || mockMembers[idx];
-        
         return {
           name: m.full_name,
-          role: m.headline || mock?.role || "Software Engineer",
-          commits: mock?.commits || Math.floor(Math.random() * 15) + 5,
-          linesAdded: mock?.linesAdded || Math.floor(Math.random() * 800) + 150,
-          weight: mock?.weight || Math.floor(100 / selectedTeam.members.length)
+          role: m.headline || "Software Engineer",
+          commits: m.commits || Math.floor(Math.random() * 15) + 5,
+          linesAdded: m.linesAdded || Math.floor(Math.random() * 800) + 150,
+          weight: m.weight || Math.floor(100 / selectedTeam.members.length)
         };
       });
     }
     
-    // Fallback to mockTeamDetails if no DB members exist
-    return mockTeamDetails[selectedTeamName] || mockTeamDetails["Alpha Bytes"] || [];
+    return [];
   };
 
   return (

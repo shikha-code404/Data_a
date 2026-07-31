@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Award,
   Sparkles,
@@ -24,63 +24,87 @@ interface ShortlistCandidate {
   justification: string;
 }
 
-const mockShortlists: Record<string, ShortlistCandidate[]> = {
-  "fe-eng": [
-    {
-      name: "Elena Rostova",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-      github: "shikha-singh",
-      score: 92,
-      match: 95,
-      skills: ["React", "Next.js", "TypeScript", "TailwindCSS"],
-      justification: "Top matching engineer with verified Supabase Vector RLS libraries and high-frequency React/Next.js commits."
-    },
-    {
-      name: "Marcus Chen",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-      github: "marcus-chen",
-      score: 84,
-      match: 82,
-      skills: ["Vue.js", "Nuxt.js", "GraphQL", "TailwindCSS"],
-      justification: "Strong frontend styling alignment, Vue.js codebase context, and solid styling aesthetics scoring."
-    }
-  ],
-  "product-design": [
-    {
-      name: "Sarah Jenkins",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-      github: "sarah-design",
-      score: 89,
-      match: 91,
-      skills: ["Figma", "UI Design", "TailwindCSS", "CSS Motion"],
-      justification: "Design systems spec matches precisely. Produced 4 open-source Figma component utility packages."
-    }
-  ],
-  "data-architect": [
-    {
-      name: "Alex Rivera",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-      github: "alexrivera-dev",
-      score: 88,
-      match: 89,
-      skills: ["Python", "PyTorch", "pgvector", "PostgreSQL"],
-      justification: "Highly relevant background in PostgreSQL vector searching and ML local feature extraction models."
-    }
-  ]
-};
-
 export default function AIShortlistingPage() {
-  const [selectedJob, setSelectedJob] = useState("fe-eng");
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [selectedJob, setSelectedJob] = useState("");
   const [isRunningMatch, setIsRunningMatch] = useState(false);
-  const [shortlist, setShortlist] = useState<ShortlistCandidate[]>(mockShortlists["fe-eng"]);
+  const [shortlist, setShortlist] = useState<ShortlistCandidate[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/jobs");
+      const data = await res.json();
+      if (data.success && Array.isArray(data.jobs)) {
+        setJobs(data.jobs);
+        if (data.jobs.length > 0) {
+          const firstJobId = data.jobs[0].id;
+          setSelectedJob(firstJobId);
+          await runMatchingForJob(firstJobId);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const runMatchingForJob = async (jobId: string) => {
+    setIsRunningMatch(true);
+    try {
+      const res = await fetch("/api/matching/candidates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId })
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.matches)) {
+        const mapped = data.matches.map((m: any) => ({
+          name: m.github_username ? `@${m.github_username}` : "Candidate Match",
+          avatar: `https://avatars.githubusercontent.com/${m.github_username || "ghost"}`,
+          github: m.github_username || "candidate",
+          score: m.talent_score || 80,
+          match: m.match_percentage || 80,
+          skills: m.matching_skills || [],
+          justification: m.reason || "Matches cosine similarity parameters."
+        }));
+        setShortlist(mapped);
+      } else {
+        setShortlist([]);
+      }
+    } catch (e) {
+      console.error(e);
+      setShortlist([]);
+    } finally {
+      setIsRunningMatch(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchJobs();
+  }, []);
 
   const handleRunMatching = () => {
-    setIsRunningMatch(true);
-    setTimeout(() => {
-      setShortlist(mockShortlists[selectedJob] || []);
-      setIsRunningMatch(false);
-    }, 1200);
+    if (selectedJob) {
+      runMatchingForJob(selectedJob);
+    }
   };
+
+  const handleJobSelectChange = (jobId: string) => {
+    setSelectedJob(jobId);
+    runMatchingForJob(jobId);
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 bg-[#131313] text-[#F5F5F5] py-20 text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#D2042D] mb-3" />
+        <p className="text-xs text-[#A3A3A3]">Loading job listings...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 bg-[#131313] text-[#F5F5F5]">
@@ -102,21 +126,22 @@ export default function AIShortlistingPage() {
           <label className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-wider block">Target Job Posting</label>
           <select
             value={selectedJob}
-            onChange={(e) => {
-              setSelectedJob(e.target.value);
-              setShortlist(mockShortlists[e.target.value] || []);
-            }}
+            onChange={(e) => handleJobSelectChange(e.target.value)}
             className="w-full max-w-md bg-[#131313] border border-[#353534] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D2042D]"
           >
-            <option value="fe-eng">Senior Front-End Engineer (Engineering)</option>
-            <option value="product-design">Product Designer (Design)</option>
-            <option value="data-architect">Data Platform Architect (Data Engineering)</option>
+            {jobs.length === 0 ? (
+              <option value="">No active job postings found</option>
+            ) : (
+              jobs.map(j => (
+                <option key={j.id} value={j.id}>{j.title} ({j.company || "Partner"})</option>
+              ))
+            )}
           </select>
         </div>
 
         <button
           onClick={handleRunMatching}
-          disabled={isRunningMatch}
+          disabled={isRunningMatch || !selectedJob}
           className="flex items-center gap-2 px-5 py-3 bg-[#D2042D] hover:bg-[#D2042D]/90 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-[#D2042D]/15 self-start md:self-auto shrink-0 disabled:opacity-50"
         >
           {isRunningMatch ? (

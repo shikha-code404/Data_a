@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { Briefcase, Bookmark, CheckCircle2, ArrowRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Briefcase, Bookmark, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { getCandidateJobMatches } from "../actions";
+import { useAuth } from "@/lib/auth-context";
 
 interface JobMatch {
   id: string;
@@ -16,48 +18,32 @@ interface JobMatch {
   skillGaps: string[];
 }
 
-const mockJobs: JobMatch[] = [
-  {
-    id: "1",
-    title: "Senior Full Stack Engineer",
-    company: "TechFlow Systems",
-    location: "Remote",
-    salary: "$140,000 - $175,000",
-    matchScore: 94,
-    type: "Full-time",
-    description: "You have strong alignment with their React and Node.js architecture requirements. Your experience with scalable cloud deployments directly matches their core infrastructure goals for Q3.",
-    matchedSkills: ["React", "TypeScript", "Node.js", "PostgreSQL"],
-    skillGaps: ["AWS Lambda"],
-  },
-  {
-    id: "2",
-    title: "Frontend Architect",
-    company: "Nexus Data Labs",
-    location: "Seattle, WA (Hybrid)",
-    salary: "$150,000 - $185,000",
-    matchScore: 78,
-    type: "Full-time",
-    description: "Your UI component library experience is a solid fit. However, they prioritize extensive experience with WebGL and complex data visualization which appears limited in your recent projects.",
-    matchedSkills: ["React", "TypeScript", "Tailwind CSS"],
-    skillGaps: ["WebGL", "Three.js", "D3.js"],
-  },
-  {
-    id: "3",
-    title: "Backend Systems Engineer",
-    company: "FinCore Solutions",
-    location: "New York, NY (On-site)",
-    salary: "$130,000 - $160,000",
-    matchScore: 35,
-    type: "Full-time",
-    description: "Your profile indicates a frontend/full-stack leaning, whereas this role demands deep expertise in low-latency systems programming and financial compliance frameworks.",
-    matchedSkills: [],
-    skillGaps: ["C++", "Rust", "Kafka", "FIX Protocol"],
-  },
-];
-
 export default function JobsPage() {
+  const { candidate_id } = useAuth();
+  const [jobs, setJobs] = useState<JobMatch[]>([]);
+  const [loading, setLoading] = useState(true);
   const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
   const [savedJobs, setSavedJobs] = useState<string[]>([]);
+
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      const res = await getCandidateJobMatches();
+      if (res.success && res.jobs) {
+        setJobs(res.jobs);
+      }
+    } catch (err) {
+      console.error("Failed to load jobs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (candidate_id) {
+      fetchJobs();
+    }
+  }, [candidate_id]);
 
   const handleApply = (id: string) => {
     if (!appliedJobs.includes(id)) {
@@ -72,6 +58,15 @@ export default function JobsPage() {
       setSavedJobs([...savedJobs, id]);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-8 max-w-[1440px] mx-auto w-full px-4 md:px-0 text-[#e5e2e1] flex flex-col items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-[#D2042D] mb-4" />
+        <p className="text-xs text-[#A3A3A3]">Finding and scoring job opportunities...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-[1440px] mx-auto w-full px-4 md:px-0 text-[#e5e2e1] font-sans">
@@ -88,7 +83,12 @@ export default function JobsPage() {
 
       {/* Ranked List of Job Matches */}
       <div className="flex flex-col gap-6">
-        {mockJobs.map((job) => {
+        {jobs.length === 0 ? (
+          <div className="bg-[#262626] border border-[#353535] rounded-xl p-10 text-center text-[#A3A3A3] text-xs">
+            No job matches found. Complete your profile or sync GitHub to match with open jobs.
+          </div>
+        ) : (
+          jobs.map((job) => {
           const isApplied = appliedJobs.includes(job.id);
           const isSaved = savedJobs.includes(job.id);
           

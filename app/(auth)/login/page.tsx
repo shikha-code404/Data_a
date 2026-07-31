@@ -12,15 +12,23 @@ export default function LoginPage() {
   const [role, setRole] = useState<"candidate" | "recruiter">("candidate");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMsg(null);
 
-    // Simulated login redirect using useAuth context
-    setTimeout(() => {
-      login(email, role);
+    try {
+      const res = await login(email, password, role);
+      if (res?.error) {
+        setErrorMsg(res.error.message || "Failed to sign in. Please verify credentials.");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "An unexpected error occurred.");
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -69,6 +77,11 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {errorMsg && (
+              <div className="p-3 bg-[#D2042D]/10 border border-[#D2042D]/20 text-[#D2042D] text-xs font-bold rounded">
+                {errorMsg}
+              </div>
+            )}
             {/* Email Field */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-[#A3A3A3] mb-2" htmlFor="email">

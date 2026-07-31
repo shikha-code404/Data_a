@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { createBrowserDbClient } from "@/lib/db/client";
 import {
   Users,
   Search,
@@ -10,11 +11,12 @@ import {
   Layers,
   MoreVertical,
   Plus,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from "lucide-react";
 
 interface CandidateCard {
-  id: string;
+  id: string; // composite: candidateId-jobId
   name: string;
   role: string;
   score: number;
@@ -32,96 +34,119 @@ interface Stage {
   candidates: CandidateCard[];
 }
 
-const initialStages: Stage[] = [
-  {
-    id: "sourced",
-    title: "Sourced / AI Matched",
-    accentColor: "border-[#D2042D]/30 bg-[#D2042D]/5",
-    dotColor: "bg-[#D2042D]",
-    candidates: [
-      {
-        id: "cand-1",
-        name: "Elena Rostova",
-        role: "Senior Full Stack Eng",
-        score: 92,
-        match: 95,
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-        skills: ["React", "Next.js", "TypeScript"],
-        jobTitle: "Senior Cloud Architect"
-      },
-      {
-        id: "cand-2",
-        name: "Alex Rivera",
-        role: "Machine Learning Eng",
-        score: 88,
-        match: 89,
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-        skills: ["Python", "PyTorch", "FastAPI"],
-        jobTitle: "Staff QA Engineer"
-      },
-    ],
-  },
-  {
-    id: "screening",
-    title: "Screening Review",
-    accentColor: "border-purple-500/30 bg-purple-500/5",
-    dotColor: "bg-purple-400",
-    candidates: [
-      {
-        id: "cand-3",
-        name: "Marcus Chen",
-        role: "Senior Architect",
-        score: 94,
-        match: 91,
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-        skills: ["AWS", "Kubernetes", "Go"],
-        jobTitle: "VP of Engineering"
-      },
-    ],
-  },
-  {
-    id: "interviewing",
-    title: "Interviewing",
-    accentColor: "border-[#ecc154]/30 bg-[#ecc154]/5",
-    dotColor: "bg-[#ecc154]",
-    candidates: [
-      {
-        id: "cand-4",
-        name: "Sarah Jenkins",
-        role: "Senior Engineer",
-        score: 90,
-        match: 88,
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-        skills: ["Go", "Kubernetes", "Redis"],
-        jobTitle: "DevOps Lead"
-      },
-    ],
-  },
-  {
-    id: "offer",
-    title: "Offer Stage",
-    accentColor: "border-[#64de87]/30 bg-[#64de87]/5",
-    dotColor: "bg-[#64de87]",
-    candidates: [
-      {
-        id: "cand-5",
-        name: "Linda Wu",
-        role: "Director of Eng",
-        score: 87,
-        match: 85,
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-        skills: ["Leadership", "System Design"],
-        jobTitle: "Senior Cloud Architect"
-      },
-    ],
-  },
-];
-
 export default function RecruiterPipelinePage() {
-  const [stages, setStages] = useState<Stage[]>(initialStages);
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [draggingFrom, setDraggingFrom] = useState<string | null>(null);
+
+  const fetchPipelineData = async () => {
+    setLoading(true);
+    try {
+      const supabase = createBrowserDbClient();
+      
+      const { data: recs, error: recsError } = await supabase
+        .from("job_recommendations")
+        .select(`
+          id,
+          candidate_id,
+          job_id,
+          match_percentage,
+          candidate:candidate_profiles (
+            id,
+            user_id,
+            github_username,
+            talent_score,
+            talent_profile
+          ),
+          job:job_postings (
+            id,
+            title
+          )
+        `);
+
+      if (recsError) throw recsError;
+
+      const { data: stagesData, error: stagesError } = await supabase
+        .from("pipeline_stages")
+        .select("*");
+
+      if (stagesError) throw stagesError;
+
+      const stageLookup: { [key: string]: string } = {};
+      (stagesData || []).forEach((row: any) => {
+        stageLookup[`${row.candidate_id}-${row.job_id}`] = row.stage;
+      });
+
+      const baseStages: Stage[] = [
+        {
+          id: "sourced",
+          title: "Sourced / AI Matched",
+          accentColor: "border-[#D2042D]/30 bg-[#D2042D]/5",
+          dotColor: "bg-[#D2042D]",
+          candidates: []
+        },
+        {
+          id: "screening",
+          title: "Screening Review",
+          accentColor: "border-purple-500/30 bg-purple-500/5",
+          dotColor: "bg-purple-400",
+          candidates: []
+        },
+        {
+          id: "interviewing",
+          title: "Interviewing",
+          accentColor: "border-[#ecc154]/30 bg-[#ecc154]/5",
+          dotColor: "bg-[#ecc154]",
+          candidates: []
+        },
+        {
+          id: "offer",
+          title: "Offer Stage",
+          accentColor: "border-[#64de87]/30 bg-[#64de87]/5",
+          dotColor: "bg-[#64de87]",
+          candidates: []
+        }
+      ];
+
+      (recs || []).forEach((r: any) => {
+        const candidateProfile = r.candidate;
+        if (!candidateProfile) return;
+
+        const candidateId = candidateProfile.id;
+        const jobId = r.job_id;
+        const activeStage = stageLookup[`${candidateId}-${jobId}`] || "sourced";
+        const stageObj = baseStages.find(s => s.id === activeStage);
+        if (stageObj) {
+          const overall = candidateProfile.talent_score?.overall_score || candidateProfile.talent_score?.overallScore || 75;
+          const skillsList = candidateProfile.talent_profile?.resume?.skills || ["React", "TypeScript"];
+          const roleTitle = candidateProfile.talent_profile?.resume?.experience?.[0]?.role || "Software Engineer";
+
+          stageObj.candidates.push({
+            id: `${candidateId}-${jobId}`,
+            name: candidateProfile.talent_profile?.resume?.name || `@${candidateProfile.github_username}` || "Candidate",
+            role: roleTitle,
+            score: overall,
+            match: Math.round(r.match_percentage || 80),
+            avatar: `https://avatars.githubusercontent.com/${candidateProfile.github_username || "ghost"}`,
+            skills: skillsList.slice(0, 3),
+            jobTitle: r.job?.title || "Position"
+          });
+        }
+      });
+
+      setStages(baseStages);
+    } catch (e) {
+      console.error("Failed to load pipeline board data:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPipelineData();
+  }, []);
 
   const handleDragStart = (candidateId: string, stageId: string) => {
     setDraggingId(candidateId);
@@ -134,6 +159,8 @@ export default function RecruiterPipelinePage() {
       setDraggingFrom(null);
       return;
     }
+
+    const [candId, jId] = draggingId.split("-");
 
     setStages(prev => {
       const fromStage = prev.find(s => s.id === draggingFrom)!;
@@ -149,6 +176,16 @@ export default function RecruiterPipelinePage() {
         return stage;
       });
     });
+
+    fetch("/api/recruiter/pipeline/stage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        candidate_id: candId,
+        job_id: jId,
+        stage: targetStageId
+      })
+    }).catch(err => console.error("Failed to persist stage change:", err));
 
     setDraggingId(null);
     setDraggingFrom(null);
@@ -186,90 +223,95 @@ export default function RecruiterPipelinePage() {
       </div>
 
       {/* Kanban Columns */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 overflow-x-auto pb-4">
-        {stages.map((stage) => {
-          const filtered = stage.candidates.filter(c =>
-            !searchQuery ||
-            c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.role.toLowerCase().includes(searchQuery.toLowerCase())
-          );
+      {loading ? (
+        <div className="py-20 text-center text-[#A3A3A3] text-xs">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#D2042D] mb-3" />
+          <span>Loading pipeline board...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 overflow-x-auto pb-4">
+          {stages.map((stage) => {
+            const filtered = stage.candidates.filter(c =>
+              !searchQuery ||
+              c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              c.role.toLowerCase().includes(searchQuery.toLowerCase())
+            );
 
-          return (
-            <div
-              key={stage.id}
-              className={`flex flex-col gap-3 min-h-[400px] rounded-2xl p-4 border ${stage.accentColor} transition-all`}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleDrop(stage.id)}
-            >
-              {/* Column Header */}
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${stage.dotColor}`} />
-                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">{stage.title}</h3>
+            return (
+              <div
+                key={stage.id}
+                className={`flex flex-col gap-3 min-h-[400px] rounded-2xl p-4 border ${stage.accentColor} transition-all`}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleDrop(stage.id)}
+              >
+                {/* Column Title */}
+                <div className="flex justify-between items-center mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${stage.dotColor}`} />
+                    <span className="font-bold text-white text-xs">{stage.title}</span>
+                  </div>
+                  <span className="font-mono text-[10px] font-bold bg-[#131313] border border-[#353534] px-1.5 py-0.5 rounded text-[#A3A3A3]">
+                    {filtered.length}
+                  </span>
                 </div>
-                <span className="text-[10px] font-bold text-[#A3A3A3] bg-[#131313] px-2 py-0.5 rounded-full border border-[#353534] font-mono">
-                  {filtered.length}
-                </span>
-              </div>
 
-              {/* Candidate Cards */}
-              {filtered.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center text-[#A3A3A3] text-xs border border-dashed border-[#353534]/50 rounded-xl">
-                  Drop candidates here
-                </div>
-              ) : (
-                filtered.map((cand) => (
-                  <div
-                    key={cand.id}
-                    draggable
-                    onDragStart={() => handleDragStart(cand.id, stage.id)}
-                    className="bg-[#1c1c1e] border border-[#353534] hover:border-[#D2042D]/30 rounded-xl p-4 cursor-grab active:cursor-grabbing transition-all shadow-md hover:shadow-[#D2042D]/5 hover:-translate-y-0.5 space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <img
-                          src={cand.avatar}
-                          alt={cand.name}
-                          className="w-8 h-8 rounded-full object-cover border border-[#353534] shrink-0"
-                        />
-                        <div>
-                          <p className="text-xs font-bold text-white leading-none">{cand.name}</p>
-                          <p className="text-[10px] text-[#A3A3A3] mt-1 truncate max-w-[100px]">{cand.role}</p>
+                {/* Cards */}
+                {filtered.length === 0 ? (
+                  <div className="border border-dashed border-[#353534]/50 rounded-xl p-6 text-center text-[10px] text-[#A3A3A3] flex flex-col items-center justify-center gap-1.5 min-h-[140px] bg-[#131313]/10">
+                    <Users className="w-5 h-5 opacity-40" />
+                    <span>No Candidates</span>
+                  </div>
+                ) : (
+                  filtered.map((cand) => (
+                    <div
+                      key={cand.id}
+                      draggable
+                      onDragStart={() => handleDragStart(cand.id, stage.id)}
+                      className="bg-[#1c1c1e] border border-[#353534] rounded-xl p-4 flex flex-col gap-3.5 hover:border-[#D2042D]/40 transition-colors cursor-grab active:cursor-grabbing shadow"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <img src={cand.avatar} alt={cand.name} className="w-8 h-8 rounded-full object-cover border border-[#353534]" />
+                          <div className="flex flex-col">
+                            <span className="font-bold text-white text-xs leading-none">{cand.name}</span>
+                            <span className="text-[10px] text-[#A3A3A3] mt-1 truncate max-w-[100px]">{cand.role}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-0.5 font-mono text-[9px] font-bold text-[#ecc154] bg-[#ecc154]/10 px-1.5 py-0.5 rounded-full border border-[#ecc154]/20">
+                          <Sparkles className="w-2.5 h-2.5" />
+                          <span>{cand.match}%</span>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-black text-[#D2042D] font-mono leading-none">{cand.match}%</p>
-                        <p className="text-[8px] text-[#A3A3A3] mt-0.5 uppercase font-bold">Match</p>
+
+                      <div className="flex flex-wrap gap-1">
+                        {cand.skills.slice(0, 2).map((s) => (
+                          <span key={s} className="px-1.5 py-0.5 bg-[#131313] border border-[#353534] text-[#A3A3A3] text-[9px] rounded font-medium">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-[#353534]/50">
+                        <span className="text-[9px] text-[#A3A3A3] truncate max-w-[100px]">{cand.jobTitle}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] font-mono font-bold text-white">{cand.score}</span>
+                          <span className="text-[9px] text-[#A3A3A3]">/100</span>
+                        </div>
                       </div>
                     </div>
+                  ))
+                )}
 
-                    <div className="flex flex-wrap gap-1">
-                      {cand.skills.slice(0, 2).map((s) => (
-                        <span key={s} className="px-1.5 py-0.5 bg-[#131313] border border-[#353534] text-[#A3A3A3] text-[9px] rounded font-medium">
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1 border-t border-[#353534]/50">
-                      <span className="text-[9px] text-[#A3A3A3] truncate max-w-[100px]">{cand.jobTitle}</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[10px] font-mono font-bold text-white">{cand.score}</span>
-                        <span className="text-[9px] text-[#A3A3A3]">/100</span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-
-              {/* Add Candidate Placeholder */}
-              <button className="mt-auto w-full border border-dashed border-[#353534]/50 hover:border-[#D2042D]/30 text-[#A3A3A3] hover:text-white rounded-xl py-2.5 text-xs font-semibold flex items-center justify-center gap-1 transition-all">
-                <Plus className="w-3.5 h-3.5" /> Add
-              </button>
-            </div>
-          );
-        })}
-      </div>
+                {/* Add Candidate Placeholder */}
+                <button className="mt-auto w-full border border-dashed border-[#353534]/50 hover:border-[#D2042D]/30 text-[#A3A3A3] hover:text-white rounded-xl py-2.5 text-xs font-semibold flex items-center justify-center gap-1 transition-all">
+                  <Plus className="w-3.5 h-3.5" /> Add
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

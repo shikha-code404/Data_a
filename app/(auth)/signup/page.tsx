@@ -13,16 +13,23 @@ export default function SignupPage() {
   const [role, setRole] = useState<"candidate" | "recruiter">("candidate");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMsg(null);
 
-    // TODO: Connect to real Supabase Auth signup endpoints
-    // Currently stubbed with simulation redirect
-    setTimeout(() => {
-      signup(name, email, role);
+    try {
+      const res = await signup(name, email, password, role);
+      if (res?.error) {
+        setErrorMsg(res.error.message || "Failed to create account. Please try again.");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "An unexpected error occurred.");
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -75,6 +82,11 @@ export default function SignupPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {errorMsg && (
+            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-650 dark:text-red-400 text-xs font-bold rounded">
+              {errorMsg}
+            </div>
+          )}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-zinc-650 dark:text-zinc-300">
               Full Name
