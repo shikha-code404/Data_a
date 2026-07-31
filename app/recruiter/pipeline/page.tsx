@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { createBrowserDbClient } from "@/lib/db/client";
+import { supabaseBrowser } from "@/lib/db/client";
 import {
   Users,
   Search,
@@ -44,7 +44,7 @@ export default function RecruiterPipelinePage() {
   const fetchPipelineData = async () => {
     setLoading(true);
     try {
-      const supabase = createBrowserDbClient();
+      const supabase = supabaseBrowser;
       
       const { data: recs, error: recsError } = await supabase
         .from("job_recommendations")

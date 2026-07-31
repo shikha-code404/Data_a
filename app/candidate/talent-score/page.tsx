@@ -69,7 +69,6 @@ export default function TalentScorePage() {
       </header>
 
       {overall === null ? (
-        {/* Hero Section - Empty CTA State */}
         <div className="bg-[#262626] border border-[#353535] rounded-xl p-10 flex flex-col items-center justify-center text-center gap-6">
           <Award className="w-16 h-16 text-[#D2042D] animate-pulse" />
           <div className="space-y-2">

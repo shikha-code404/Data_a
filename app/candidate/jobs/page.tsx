@@ -205,7 +205,7 @@ export default function JobsPage() {
               </div>
             </article>
           );
-        })}
+        }))}
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { createBrowserDbClient } from "@/lib/db/client";
+import { supabaseBrowser } from "@/lib/db/client";
 import {
   Search,
   Filter,
@@ -214,7 +214,7 @@ function DiscoveryContent() {
   const loadInitialCandidates = async () => {
     setIsSearching(true);
     try {
-      const supabase = createBrowserDbClient();
+      const supabase = supabaseBrowser;
       const { data: profiles, error } = await supabase
         .from("candidate_profiles")
         .select("*")
