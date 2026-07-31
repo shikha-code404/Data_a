@@ -93,7 +93,7 @@ const AGENT_PRESETS = [
       slidesText: [
         "Slide 1: SmartRecruit - AI-driven Enterprise Talent Acquisition System",
         "Slide 2: Problem & Solution. Traditional recruiting is slow. SmartRecruit uses a robust pipeline. We ingest GitHub repositories and parse developer portfolios using NLP models, generating a vector space embedding for matching.",
-        "Slide 3: Technology Stack & Core Architecture. Built using Next.js App Router, TypeScript, and Supabase Postgres. Vector similarities are calculated in pgvector with cosine similarity. LLMs are integrated via the CallAgent abstraction, utilizing Ollama's qwen3.5:9b locally, and falling back to Hugging Face APIs.",
+        "Slide 3: Technology Stack & Core Architecture. Built using Next.js App Router, TypeScript, and Supabase Postgres. Vector similarities are calculated in pgvector with cosine similarity. LLMs are integrated via the CallAgent abstraction, utilizing Ollama's qwen3.5:4b locally, and falling back to Hugging Face APIs.",
         "Slide 4: Business Potential & Market Strategy. Targeting mid-to-large tech companies. Our subscription SaaS model charges per seat. Initial traction shows a 40% decrease in screening time during pilot testing.",
         "Slide 5: Conclusions & Growth Milestones. Raising $1M seed funding to expand the ML feature set and scale backend ingestion servers. Expected milestones include integration with major ATS software by Q4."
       ]
@@ -568,7 +568,7 @@ export default function DebugRoute() {
           </div>
           <div className="flex gap-2">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20">
-              Ollama: qwen3.5:9b
+              Ollama: qwen3.5:4b
             </span>
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20">
               HF Fallback: Enabled

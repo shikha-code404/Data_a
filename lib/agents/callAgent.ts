@@ -64,7 +64,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
   let responseObj: any = null;
   let source = "";
 
-  // 2. Try Ollama (Local qwen3.5:9b)
+  // 2. Try Ollama (Local qwen3.5:4b)
   const ollamaHost = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
   console.log(`[Ollama Request] agentType: ${agentType}, host: ${ollamaHost}`);
 
@@ -78,7 +78,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "qwen3.5:9b",
+        model: "qwen3.5:4b",
         messages: [
           {
             role: "system",
@@ -116,10 +116,10 @@ export async function callAgent(agentType: string, input: object): Promise<objec
   } catch (ollamaErr: any) {
     console.warn(`Ollama failed or timed out: ${ollamaErr.message}. Falling back to Hugging Face.`);
 
-    // 3. Fallback to Hugging Face Qwen3.5-9B
+    // 3. Fallback to Hugging Face Qwen3.5-4B
     try {
       const apiKey = process.env.HF_API_KEY;
-      const modelId = process.env.HF_MODEL_ID || "Qwen/Qwen3.5-9B";
+      const modelId = process.env.HF_MODEL_ID || "Qwen/Qwen3.5-4B";
       
       console.log(`[HF Request] modelId: ${modelId}`);
       if (!apiKey || apiKey.includes("placeholder")) {

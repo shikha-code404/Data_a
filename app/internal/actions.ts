@@ -962,7 +962,26 @@ export async function seedHackathonTestData() {
       }
     });
 
-    // Team C: Leave empty of pitch_analyses and team_contributions to verify error handling
+    // Team C: Seed pitch_analyses and team_contributions to allow successful ranking in playground
+    await adminClient.from("pitch_analyses").insert({
+      team_id_or_candidate_id: teamC.id,
+      ppt_url: "https://example.com/gamma.pptx",
+      scores: { overall_pitch_score: 75, innovation: 70, usability: 80 },
+      summary: "Good basic pitch.",
+      improvement_suggestions: ["Add more details"],
+      evaluation_method: "local_fallback"
+    });
+
+    await adminClient.from("team_contributions").insert({
+      team_id: teamC.id,
+      member_breakdown: {
+        members: [],
+        summary: {
+          total_commits: 80,
+          dominance: { flag: false, percentage: 50, member_username: "alexrivera-dev" }
+        }
+      }
+    });
 
     return {
       success: true,
