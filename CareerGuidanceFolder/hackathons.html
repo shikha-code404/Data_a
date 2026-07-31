@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HireSpark - Hackathons</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Manrope -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config injected from Design System -->
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-container": "#8da9d1",
+                      "primary-fixed": "#ffddb0",
+                      "primary-container": "#c9a063",
+                      "primary": "#ebbf7f",
+                      "on-tertiary": "#123153",
+                      "on-primary-container": "#533702",
+                      "error-container": "#93000a",
+                      "surface-dim": "#16130f",
+                      "surface-tint": "#ebbf7f",
+                      "inverse-primary": "#795823",
+                      "on-tertiary-container": "#203e60",
+                      "on-surface": "#eae1d9",
+                      "on-tertiary-fixed": "#001c38",
+                      "on-secondary-fixed": "#1d1b19",
+                      "error": "#ffb4ab",
+                      "secondary": "#cac6c2",
+                      "surface-container-high": "#2d2924",
+                      "tertiary-fixed": "#d3e4ff",
+                      "surface-container-low": "#1f1b16",
+                      "secondary-fixed-dim": "#cac6c2",
+                      "tertiary-fixed-dim": "#acc8f2",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary-fixed-variant": "#484644",
+                      "on-background": "#eae1d9",
+                      "on-primary": "#442c00",
+                      "surface-bright": "#3d3833",
+                      "primary-fixed-dim": "#ebbf7f",
+                      "surface-container-lowest": "#110e0a",
+                      "on-surface-variant": "#d2c4b5",
+                      "inverse-on-surface": "#34302b",
+                      "on-primary-fixed": "#281800",
+                      "surface": "#16130f",
+                      "inverse-surface": "#eae1d9",
+                      "outline-variant": "#4e453a",
+                      "on-secondary-container": "#bcb8b4",
+                      "on-tertiary-fixed-variant": "#2c486b",
+                      "secondary-container": "#4b4946",
+                      "background": "#16130f",
+                      "on-primary-fixed-variant": "#5f410c",
+                      "secondary-fixed": "#e6e2de",
+                      "surface-container": "#231f1a",
+                      "surface-container-highest": "#38342f",
+                      "on-error": "#690005",
+                      "surface-variant": "#38342f",
+                      "on-secondary": "#32302e",
+                      "tertiary": "#acc8f2",
+                      "outline": "#9b8f81"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "base": "4px",
+                      "lg": "40px",
+                      "xs": "8px",
+                      "md": "24px",
+                      "sm": "16px",
+                      "xl": "64px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px",
+                      "margin-desktop": "48px"
+              },
+              "fontFamily": {
+                      "label-md": [
+                              "Manrope"
+                      ],
+                      "label-caps": [
+                              "Manrope"
+                      ],
+                      "headline-xl": [
+                              "Manrope"
+                      ],
+                      "headline-lg-mobile": [
+                              "Manrope"
+                      ],
+                      "body-md": [
+                              "Manrope"
+                      ],
+                      "headline-lg": [
+                              "Manrope"
+                      ],
+                      "body-lg": [
+                              "Manrope"
+                      ]
+              },
+              "fontSize": {
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.0",
+                                      "letterSpacing": "0.1em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-xl": [
+                              "40px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen font-body-md text-body-md antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar (Shared Component) -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-desktop h-20 bg-surface/80 dark:bg-surface-dim/80 backdrop-blur-md border-b border-outline-variant dark:border-outline-variant">
+<!-- Brand Logo -->
+<div class="font-headline-lg text-headline-lg font-bold text-primary dark:text-primary-fixed tracking-tight">
+            HireSpark
+        </div>
+<!-- Navigation Links -->
+<div class="hidden md:flex space-x-lg font-label-md text-label-md">
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors duration-200" href="#">Overview</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors duration-200" href="#">Insights</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors duration-200" href="#">Jobs</a>
+<a class="text-primary dark:text-primary-fixed border-b-2 border-primary dark:border-primary-fixed pb-1" href="#">Hackathons</a>
+</div>
+<!-- Trailing Actions & Profile -->
+<div class="flex items-center space-x-md">
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors duration-200 flex items-center justify-center">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant">
+<img alt="Candidate profile avatar with initials" class="w-full h-full object-cover" data-alt="A professional high-contrast portrait of a person in a dark, moody studio setting, lit softly to emphasize classy, sophisticated corporate headshot aesthetics, warm minimalist tones, perfect 100 word description for a UI avatar. The subject exudes confidence and high-trust B2B professionalism, fitting a premium SaaS experience where quality is signaled through restraint rather than excess. The background is a deeply desaturated dark gray, nearly black, ensuring the subject stands out sharply." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBo6MgfeoCZ7Z-fovszYTd73KzditudyA9uzA_LUEwWl2Pj9FzLwwMLl8PxPe5IWtNwOzSF2Na41K2bdN37sFz1aNNNN-f2-znA6xgQS3yoR_8iiScntKuDAC2BBQagsblWNf48ftrhFIVMWw_z61H8ZpsWnB2xYBD02dtfqAIYmuPOcEi3Ug9XxJabQblaS4P3doMiXOm8OFYgPvr-LsTZHYhcpj2Y_pOlAOIu_wcjNw-7CC1MoP7N"/>
+</div>
+</div>
+</nav>
+<!-- Main Content Layout -->
+<main class="pt-[120px] pb-xl px-margin-mobile md:px-margin-desktop max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left/Main Column: Hero & Grids -->
+<div class="lg:col-span-8 flex flex-col space-y-xl">
+<!-- Hero Feature: The Generative AI Breakthrough -->
+<section class="relative bg-surface-container border border-outline-variant rounded p-lg md:p-xl flex flex-col justify-end min-h-[400px] overflow-hidden group">
+<div class="absolute inset-0 z-0">
+<div class="absolute inset-0 bg-gradient-to-t from-surface-dim to-transparent z-10"></div>
+<img class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700 ease-out" data-alt="A stunning, highly architectural and abstract visualization of artificial intelligence and neural networks. Geometric glass structures intersect with thin, glowing golden lines against a deep, rich black background. The lighting is dramatic and precise, evoking a sense of quiet luxury, advanced technology, and high-end enterprise innovation. The aesthetic is incredibly refined, avoiding busy details in favor of vast, structured space and subtle depth." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDc5eqZDbUiSPmVRYj75XqdRlN8378h0uFb7j2i59l_XOqjGHIgcKwNe-tMXLJ2QO4uhwmUD59GX7_lEjaheLGAfgPOE6wz-N6EPIeTE-qLF9kH2Z2Cwm7RRnPtEXGwhDb0CFKEtTgf2m73YCQDLj4eqFQ3DGLfCLGvCUiH_h_eXRLShpnlo1AE1z5GM7DPWb22GK39BdIKR8KqUf1gP0jxoEbsXgEFp0fP6Y_R3AfxnSqoeC7nCmE"/>
+</div>
+<div class="relative z-20 max-w-2xl">
+<span class="inline-block font-label-caps text-label-caps text-primary tracking-widest uppercase mb-sm border border-primary/30 px-xs py-base rounded bg-surface-dim/50 backdrop-blur-sm">Featured Event</span>
+<h1 class="font-headline-xl text-headline-xl text-on-surface mb-md tracking-tight">The Generative AI Breakthrough</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-lg max-w-xl">
+                        Push the boundaries of large language models. Build enterprise-grade generative applications and compete for industry recognition.
+                    </p>
+<div class="flex items-center space-x-md mb-lg font-label-md text-label-md text-secondary">
+<div class="flex items-center space-x-xs">
+<span class="material-symbols-outlined text-primary">calendar_today</span>
+<span>Oct 15 - Oct 17</span>
+</div>
+<div class="flex items-center space-x-xs">
+<span class="material-symbols-outlined text-primary">emoji_events</span>
+<span>$10,000 + AI Certification</span>
+</div>
+</div>
+<button class="bg-primary-container text-on-primary-container font-label-md text-label-md px-lg py-xs rounded hover:opacity-90 transition-opacity">
+                        Register Now
+                    </button>
+</div>
+</section>
+<!-- Upcoming Hackathons Grid -->
+<section>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-lg tracking-tight">Upcoming Challenges</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Card 1 -->
+<div class="bg-surface-container-low border border-outline-variant rounded p-md hover:border-primary-container/50 transition-colors flex flex-col h-full">
+<div class="flex justify-between items-start mb-md">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Full-Stack Speedrun</h3>
+<span class="material-symbols-outlined text-primary">code</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-md flex-grow">
+                            Architect and deploy a highly scalable microservices platform under intense time constraints. Show your end-to-end mastery.
+                        </p>
+<div class="border-t border-outline-variant pt-sm mt-auto">
+<div class="flex flex-wrap gap-xs mb-sm">
+<span class="text-on-surface text-[10px] uppercase tracking-widest font-bold bg-surface-variant px-2 py-1 rounded">React</span>
+<span class="text-on-surface text-[10px] uppercase tracking-widest font-bold bg-surface-variant px-2 py-1 rounded">Node.js</span>
+<span class="text-on-surface text-[10px] uppercase tracking-widest font-bold bg-surface-variant px-2 py-1 rounded">AWS</span>
+</div>
+<div class="flex items-center justify-between font-label-md text-label-md">
+<span class="text-primary">$5,000 Prize Pool</span>
+<button class="text-primary hover:text-primary-fixed flex items-center space-x-xs">
+<span>Details</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-low border border-outline-variant rounded p-md hover:border-primary-container/50 transition-colors flex flex-col h-full">
+<div class="flex justify-between items-start mb-md">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Cybersecurity Forge</h3>
+<span class="material-symbols-outlined text-primary">security</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-md flex-grow">
+                            Identify vulnerabilities in complex enterprise systems. A rigorous test of defensive and offensive security protocols.
+                        </p>
+<div class="border-t border-outline-variant pt-sm mt-auto">
+<div class="flex flex-wrap gap-xs mb-sm">
+<span class="text-on-surface text-[10px] uppercase tracking-widest font-bold bg-surface-variant px-2 py-1 rounded">Python</span>
+<span class="text-on-surface text-[10px] uppercase tracking-widest font-bold bg-surface-variant px-2 py-1 rounded">Rust</span>
+<span class="text-on-surface text-[10px] uppercase tracking-widest font-bold bg-surface-variant px-2 py-1 rounded">Network Sec</span>
+</div>
+<div class="flex items-center justify-between font-label-md text-label-md">
+<span class="text-primary">Security Cert + $3k</span>
+<button class="text-primary hover:text-primary-fixed flex items-center space-x-xs">
+<span>Details</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-low border border-outline-variant rounded p-md hover:border-primary-container/50 transition-colors flex flex-col h-full">
+<div class="flex justify-between items-start mb-md">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Data Viz Masters</h3>
+<span class="material-symbols-outlined text-primary">bar_chart</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-md flex-grow">
+                            Transform massive, unstructured datasets into elegant, actionable visual narratives for executive decision-making.
+                        </p>
+<div class="border-t border-outline-variant pt-sm mt-auto">
+<div class="flex flex-wrap gap-xs mb-sm">
+<span class="text-on-surface text-[10px] uppercase tracking-widest font-bold bg-surface-variant px-2 py-1 rounded">D3.js</span>
+<span class="text-on-surface text-[10px] uppercase tracking-widest font-bold bg-surface-variant px-2 py-1 rounded">SQL</span>
+<span class="text-on-surface text-[10px] uppercase tracking-widest font-bold bg-surface-variant px-2 py-1 rounded">Tableau</span>
+</div>
+<div class="flex items-center justify-between font-label-md text-label-md">
+<span class="text-primary">Featured Portfolio</span>
+<button class="text-primary hover:text-primary-fixed flex items-center space-x-xs">
+<span>Details</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right/Sidebar Column: Secondary Information -->
+<aside class="lg:col-span-4 flex flex-col space-y-xl">
+<!-- My Registrations (Secondary List) -->
+<div>
+<h3 class="font-label-caps text-label-caps text-outline uppercase tracking-widest mb-md border-b border-outline-variant pb-xs">My Registrations</h3>
+<ul class="space-y-sm">
+<li class="flex items-center justify-between group cursor-pointer">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">The Generative AI Breakthrough</span>
+<span class="font-body-md text-[13px] text-on-surface-variant">Starts in 14 days</span>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+</li>
+<li class="flex items-center justify-between group cursor-pointer border-t border-outline-variant pt-sm">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">FinTech Innovators</span>
+<span class="font-body-md text-[13px] text-on-surface-variant">Team matching pending</span>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+</li>
+</ul>
+</div>
+<!-- Past Achievements (Secondary List) -->
+<div>
+<h3 class="font-label-caps text-label-caps text-outline uppercase tracking-widest mb-md border-b border-outline-variant pb-xs">Past Achievements</h3>
+<ul class="space-y-sm">
+<li class="flex items-start space-x-sm group cursor-pointer">
+<span class="material-symbols-outlined text-primary mt-1 text-[18px]">trophy</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">1st Place - Cloud Native Hack 2023</span>
+<span class="font-body-md text-[13px] text-on-surface-variant">Architected serverless voting platform.</span>
+</div>
+</li>
+<li class="flex items-start space-x-sm group cursor-pointer border-t border-outline-variant pt-sm">
+<span class="material-symbols-outlined text-secondary mt-1 text-[18px]">verified</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">Finalist - Web3 Winter Jam</span>
+<span class="font-body-md text-[13px] text-on-surface-variant">Smart contract optimization challenge.</span>
+</div>
+</li>
+</ul>
+</div>
+</aside>
+</main>
+</body></html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>HireSpark - Resume Builder</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#e5e2e1",
+                        "outline-variant": "#584142",
+                        "on-tertiary": "#00391f",
+                        "secondary-fixed-dim": "#ecc154",
+                        "surface-variant": "#353534",
+                        "surface-container-highest": "#353534",
+                        "on-primary-fixed-variant": "#8b162d",
+                        "error-container": "#93000a",
+                        "primary-fixed-dim": "#ffb2b6",
+                        "tertiary": "#61dd98",
+                        "on-primary": "#67001b",
+                        "outline": "#a68a8b",
+                        "on-background": "#e5e2e1",
+                        "primary-container": "#ee6271",
+                        "secondary-fixed": "#ffdf96",
+                        "on-tertiary-container": "#00311a",
+                        "tertiary-fixed": "#7ffab3",
+                        "on-primary-container": "#5b0016",
+                        "inverse-surface": "#e5e2e1",
+                        "surface": "#131313",
+                        "secondary": "#ecc154",
+                        "on-tertiary-fixed": "#002110",
+                        "on-surface-variant": "#dfbfc0",
+                        "error": "#ffb4ab",
+                        "surface-tint": "#ffb2b6",
+                        "surface-container-low": "#1c1b1b",
+                        "on-error": "#690005",
+                        "primary-fixed": "#ffdadb",
+                        "surface-container": "#201f1f",
+                        "on-secondary": "#3e2e00",
+                        "inverse-on-surface": "#313030",
+                        "on-secondary-fixed-variant": "#594400",
+                        "tertiary-fixed-dim": "#61dd98",
+                        "surface-container-high": "#2a2a2a",
+                        "secondary-container": "#b18c22",
+                        "tertiary-container": "#19a566",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-dim": "#131313",
+                        "on-error-container": "#ffdad6",
+                        "inverse-primary": "#ac3043",
+                        "background": "#131313",
+                        "primary": "#ffb2b6",
+                        "on-tertiary-fixed-variant": "#00522f",
+                        "on-secondary-container": "#362800",
+                        "on-primary-fixed": "#40000d",
+                        "on-secondary-fixed": "#251a00",
+                        "surface-bright": "#393939"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "margin-mobile": "16px",
+                        "lg": "24px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "gutter": "24px",
+                        "2xl": "48px",
+                        "md": "16px",
+                        "base": "4px",
+                        "margin-desktop": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Manrope"],
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display-metrics": ["Manrope"],
+                        "headline-lg": ["Manrope"],
+                        "headline-lg-mobile": ["Manrope"],
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display-metrics": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom print preview styling for resume */
+        .resume-preview {
+            background-color: #FFFFFF;
+            color: #111827; /* Dark gray for high contrast text */
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-surface-container dark:bg-surface-container border-b border-outline-variant dark:border-outline-variant docked full-width top-0 z-50">
+<div class="flex justify-between items-center w-full px-margin-desktop max-w-[1440px] mx-auto h-16">
+<div class="flex items-center gap-xl">
+<div class="font-headline-md text-headline-md font-bold text-primary dark:text-primary tracking-tight">HireSpark</div>
+<nav class="hidden md:flex gap-lg h-full">
+<a class="flex items-center h-full text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-bright dark:hover:bg-surface-bright transition-colors duration-200 px-sm font-label-md text-label-md" href="#">Overview</a>
+<a class="flex items-center h-full text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-bright dark:hover:bg-surface-bright transition-colors duration-200 px-sm font-label-md text-label-md" href="#">Insights</a>
+<a class="flex items-center h-full text-primary dark:text-primary border-b-2 border-primary pb-1 font-bold px-sm font-label-md text-label-md" href="#">Jobs</a>
+<a class="flex items-center h-full text-on-surface-variant dark:text-on-surface-variant hover:text-on-surface hover:bg-surface-bright dark:hover:bg-surface-bright transition-colors duration-200 px-sm font-label-md text-label-md" href="#">Hackathons</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<button aria-label="Notifications" class="p-sm text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-bright border border-outline-variant flex items-center justify-center font-label-md text-on-surface cursor-pointer" title="Elena Rostova">
+                    ER
+                </div>
+</div>
+</div>
+</header>
+<!-- Main Content Grid -->
+<main class="flex-1 w-full max-w-[1440px] mx-auto px-margin-mobile md:px-margin-desktop py-xl grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Panel: Settings / Templates -->
+<aside class="lg:col-span-4 flex flex-col gap-lg">
+<div class="bg-surface-container border border-outline-variant p-lg rounded flex flex-col gap-md h-full">
+<h1 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-md">Resume Templates</h1>
+<div class="grid grid-cols-2 gap-md mb-xl">
+<!-- Template Card: Modern (Selected) -->
+<button class="relative flex flex-col items-center gap-sm group cursor-pointer focus:outline-none">
+<div class="w-full aspect-[3/4] bg-surface-bright border-2 border-primary rounded overflow-hidden flex items-center justify-center p-xs relative transition-all shadow-md">
+<div class="absolute inset-0 bg-[#222] bg-cover bg-center opacity-40 mix-blend-overlay" data-alt="A macro shot of a sleek, modern architectural blueprint or geometric pattern, emphasizing clean lines and structured layout, rendered in high contrast monochrome. Represents structured data and clean design."></div>
+<div class="w-full h-full border border-[#444] p-xs flex flex-col gap-1 relative z-10 bg-[#222]/80">
+<div class="h-2 w-1/2 bg-[#777]"></div>
+<div class="h-1 w-1/3 bg-[#555] mb-2"></div>
+<div class="h-1 w-full bg-[#333]"></div>
+<div class="h-1 w-5/6 bg-[#333]"></div>
+</div>
+</div>
+<span class="font-label-md text-label-md text-primary font-bold">Modern</span>
+<div class="absolute top-2 right-2 bg-primary text-on-primary rounded-full p-0.5">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</div>
+</button>
+<!-- Template Card: Minimal -->
+<button class="relative flex flex-col items-center gap-sm group cursor-pointer focus:outline-none">
+<div class="w-full aspect-[3/4] bg-surface-container-high border border-outline-variant rounded overflow-hidden flex items-center justify-center p-xs hover:border-[#888] transition-colors shadow-sm">
+<div class="w-full h-full border border-[#333] p-xs flex flex-col items-center gap-1">
+<div class="h-2 w-1/3 bg-[#666]"></div>
+<div class="h-1 w-1/4 bg-[#444] mb-2"></div>
+<div class="h-1 w-4/5 bg-[#333]"></div>
+<div class="h-1 w-3/4 bg-[#333]"></div>
+</div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant group-hover:text-on-surface transition-colors">Minimal</span>
+</button>
+</div>
+<div class="mt-auto flex flex-col gap-md">
+<div class="bg-surface-container-high border border-outline-variant rounded p-md flex items-start gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] mt-0.5">info</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                            Add education or projects to strengthen your resume. Ensure your profile data is fully complete for optimal parsing by ATS systems.
+                            <a class="inline-flex items-center gap-1 text-on-surface hover:text-primary transition-colors underline decoration-[#555] underline-offset-2 ml-1" href="#">
+                                Update Profile
+                                <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</a>
+</p>
+</div>
+<button class="w-full py-md bg-secondary hover:bg-[#e0b84c] text-[#000000] font-headline-sm text-headline-sm rounded transition-colors shadow-sm flex justify-center items-center gap-sm">
+<span class="material-symbols-outlined">description</span>
+                        Generate Resume
+                    </button><div class="mt-md pt-md border-t border-outline-variant">
+    <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mb-sm">Quick Optimize for Top Firms</h3>
+    <div class="grid grid-cols-4 gap-sm mb-sm">
+        <button class="p-xs bg-surface-container-high border border-outline-variant rounded hover:border-primary transition-all group" title="Google">
+            <div class="w-full aspect-square flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
+                <span class="material-symbols-outlined text-[20px]">google</span>
+            </div>
+        </button>
+        <button class="p-xs bg-surface-container-high border border-outline-variant rounded hover:border-primary transition-all group" title="Amazon">
+            <div class="w-full aspect-square flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
+                <span class="material-symbols-outlined text-[20px]">shopping_cart</span>
+            </div>
+        </button>
+        <button class="p-xs bg-surface-container-high border border-outline-variant rounded hover:border-primary transition-all group" title="Meta">
+            <div class="w-full aspect-square flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
+                <span class="material-symbols-outlined text-[20px]">all_inclusive</span>
+            </div>
+        </button>
+        <button class="p-xs bg-surface-container-high border border-outline-variant rounded hover:border-primary transition-all group" title="Netflix">
+            <div class="w-full aspect-square flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
+                <span class="material-symbols-outlined text-[20px]">movie</span>
+            </div>
+        </button>
+        <button class="p-xs bg-surface-container-high border border-outline-variant rounded hover:border-primary transition-all group" title="Microsoft">
+            <div class="w-full aspect-square flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
+                <span class="material-symbols-outlined text-[20px]">grid_view</span>
+            </div>
+        </button>
+        <button class="p-xs bg-surface-container-high border border-outline-variant rounded hover:border-primary transition-all group" title="Apple">
+            <div class="w-full aspect-square flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
+                <span class="material-symbols-outlined text-[20px]">phone_iphone</span>
+            </div>
+        </button>
+        <button class="p-xs bg-surface-container-high border border-outline-variant rounded hover:border-primary transition-all group" title="Airbnb">
+            <div class="w-full aspect-square flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
+                <span class="material-symbols-outlined text-[20px]">home</span>
+            </div>
+        </button>
+        <button class="p-xs bg-surface-container-high border border-outline-variant rounded hover:border-primary transition-all group" title="Stripe">
+            <div class="w-full aspect-square flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
+                <span class="material-symbols-outlined text-[20px]">payments</span>
+            </div>
+        </button>
+    </div>
+    <p class="font-body-sm text-body-sm text-on-surface-variant/60 italic">
+        Select a company to tailor your resume for their specific ATS requirements.
+    </p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Right Panel: Resume Preview -->
+<section class="lg:col-span-8 flex justify-center items-start overflow-y-auto bg-surface-container-lowest p-lg md:p-2xl border border-outline-variant rounded min-h-[800px]">
+<!-- The Resume Document -->
+<article class="resume-preview w-full max-w-[800px] aspect-[1/1.414] p-[40px] md:p-[60px] flex flex-col gap-[32px] rounded-sm transform origin-top lg:scale-100 scale-95 shadow-2xl relative overflow-hidden">
+<!-- Header -->
+<header class="flex flex-col gap-2 border-b-2 border-gray-800 pb-6">
+<h1 class="font-['Manrope'] text-[36px] font-bold leading-none tracking-tight text-gray-900">Candidate User</h1>
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 font-['Inter'] text-[14px] text-gray-600">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">mail</span>
+                            candidate@hirespark.com
+                        </span>
+<span class="text-gray-300">|</span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">link</span>
+                            github.com/alexrivera-dev
+                        </span>
+<span class="text-gray-300">|</span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+                            San Francisco, CA
+                        </span>
+</div>
+</header>
+<!-- Professional Summary -->
+<section class="flex flex-col gap-3">
+<h2 class="font-['Manrope'] text-[18px] font-bold uppercase tracking-wider text-gray-800 border-b border-gray-300 pb-1">Professional Summary</h2>
+<p class="font-['Inter'] text-[14px] leading-relaxed text-gray-700 text-justify">
+                        Results-driven Full-Stack Developer with deep expertise in modern JavaScript frameworks and scalable backend architecture. Specializes in integrating AI models into enterprise workflows to enhance decision-making and operational efficiency. Proven track record of architecting high-performance applications from concept to deployment in fast-paced environments.
+                    </p>
+</section>
+<!-- Experience -->
+<section class="flex flex-col gap-4">
+<h2 class="font-['Manrope'] text-[18px] font-bold uppercase tracking-wider text-gray-800 border-b border-gray-300 pb-1">Experience</h2>
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-baseline">
+<h3 class="font-['Inter'] text-[16px] font-bold text-gray-900">Senior Developer</h3>
+<span class="font-['Inter'] text-[13px] font-semibold text-gray-500 uppercase tracking-wider">Present</span>
+</div>
+<div class="font-['Inter'] text-[14px] text-gray-600 font-medium mb-2">TechSpark Inc.</div>
+<ul class="list-disc list-outside ml-4 font-['Inter'] text-[14px] leading-relaxed text-gray-700 flex flex-col gap-1.5">
+<li class="">Architected and deployed highly scalable microservices using Node.js and TypeScript, reducing system latency by 35%.</li>
+<li class="">Spearheaded the integration of OpenAI APIs into core SaaS product, enabling automated data extraction and synthesis for enterprise clients.</li>
+<li class="">Mentored a team of 4 junior developers, establishing strict CI/CD pipelines and code quality standards.</li>
+</ul>
+</div>
+</section>
+<!-- Skills -->
+<section class="flex flex-col gap-3">
+<h2 class="font-['Manrope'] text-[18px] font-bold uppercase tracking-wider text-gray-800 border-b border-gray-300 pb-1">Technical Skills</h2>
+<div class="flex flex-wrap gap-2 mt-1">
+<span class="px-3 py-1 bg-gray-100 border border-gray-200 rounded text-gray-800 font-['Inter'] text-[13px] font-medium">React</span>
+<span class="px-3 py-1 bg-gray-100 border border-gray-200 rounded text-gray-800 font-['Inter'] text-[13px] font-medium">Next.js</span>
+<span class="px-3 py-1 bg-gray-100 border border-gray-200 rounded text-gray-800 font-['Inter'] text-[13px] font-medium">TypeScript</span>
+<span class="px-3 py-1 bg-gray-100 border border-gray-200 rounded text-gray-800 font-['Inter'] text-[13px] font-medium">Node.js</span>
+<span class="px-3 py-1 bg-gray-100 border border-gray-200 rounded text-gray-800 font-['Inter'] text-[13px] font-medium">Supabase</span>
+<span class="px-3 py-1 bg-gray-100 border border-gray-200 rounded text-gray-800 font-['Inter'] text-[13px] font-medium">Python</span>
+<span class="px-3 py-1 bg-gray-100 border border-gray-200 rounded text-gray-800 font-['Inter'] text-[13px] font-medium">PostgreSQL</span>
+<span class="px-3 py-1 bg-gray-100 border border-gray-200 rounded text-gray-800 font-['Inter'] text-[13px] font-medium">GraphQL</span>
+</div>
+</section>
+<!-- Decorative watermarks/elements typical of PDF generation software -->
+<div class="absolute bottom-4 right-4 opacity-10 pointer-events-none">
+<span class="material-symbols-outlined text-[64px]">description</span>
+</div>
+</article>
+</section>
+</main>
+
+
+</body></html>

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Sparkles, LogOut, User as UserIcon, Menu, X, ChevronDown, Award } from "lucide-react";
 
@@ -166,6 +167,15 @@ export const TopNav: React.FC = () => {
       )}
     </header>
   );
+};
+
+export const ConditionalTopNav: React.FC = () => {
+  const pathname = usePathname();
+  const hideNav = pathname?.startsWith("/candidate") || pathname?.startsWith("/recruiter") || pathname?.startsWith("/internal");
+
+  if (hideNav) return null;
+
+  return <TopNav />;
 };
 
 export default TopNav;

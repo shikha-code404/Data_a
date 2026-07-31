@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { mockTalentScore, mockJobs, mockRoadmapSteps } from "@/lib/mock-data";
-import { JobCard } from "@/components/JobCard";
 import { RadarScoreChart } from "@/components/RadarScoreChart";
 import { getCandidateProfileData, uploadResume } from "./actions";
 import { ResumeData } from "@/lib/resume/parser";
@@ -13,13 +12,15 @@ import {
   Compass,
   CheckCircle2,
   TrendingUp,
-  ToggleLeft,
-  ToggleRight,
   Info,
   FileText,
   UploadCloud,
-  AlertTriangle,
   RefreshCw,
+  MapPin,
+  Briefcase,
+  DollarSign,
+  ArrowUpRight,
+  AlertTriangle,
 } from "lucide-react";
 
 const GitHubIcon = ({ className }: { className?: string }) => (
@@ -45,7 +46,7 @@ export default function CandidateDashboard() {
   const [profileData, setProfileData] = useState<{
     githubUsername: string | null;
     isGitHubConnected: boolean;
-    githubData: any | null;
+    githubData: unknown;
     resumeData: ResumeData | null;
     resumeNeedsReview: boolean;
   } | null>(null);
@@ -74,7 +75,9 @@ export default function CandidateDashboard() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle PDF Resume Upload
@@ -100,97 +103,88 @@ export default function CandidateDashboard() {
       } else {
         setUploadError(res.error || "Failed to process resume.");
       }
-    } catch (err: any) {
-      setUploadError(err.message || "An error occurred during upload.");
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : "An error occurred during upload.");
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Skill badges checklist (mock verified skills)
-  const verifiedSkills = [
-    "React (Expert)",
-    "TypeScript (Expert)",
-    "Next.js (Advanced)",
-    "GraphQL (Intermediate)",
-    "System Design (Intermediate)",
-    "PostgreSQL (Intermediate)",
-  ];
+  // Skill badges checklist (mock verified skills removed as not used in new design)
 
   return (
-    <div className="space-y-8 max-w-5xl">
-      {/* Header and Loading Toggle */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-8 max-w-[1440px] mx-auto w-full px-4 md:px-0 text-[#e5e2e1] font-sans">
+      {/* Welcome Section */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#353534]/50 pb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-            <span>Welcome back, Elena</span>
-            <Sparkles className="h-5 w-5 text-indigo-500 animate-pulse" />
+          <h1 className="text-3xl font-bold tracking-tight text-[#F5F5F5] flex items-center gap-2">
+            Welcome back, {profileData?.resumeData?.name?.split(" ")[0] || "Elena"}{" "}
+            <Sparkles className="w-6 h-6 text-[#D2042D]" />
           </h1>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Your profile was updated by AI Agent parsing 3 hours ago.
-          </p>
+          <p className="text-sm text-[#A3A3A3] mt-1">Your profile was updated by AI Agent parsing 3 hours ago.</p>
         </div>
-
-        {/* Loading State Toggle */}
-        <button
-          onClick={() => setIsLoadingState(!isLoadingState)}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-semibold text-zinc-700 dark:text-zinc-350 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-        >
-          <span>Show Loading State:</span>
-          {isLoadingState ? (
-            <ToggleRight className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          ) : (
-            <ToggleLeft className="h-5 w-5 text-zinc-400" />
-          )}
-        </button>
-      </div>
+        <div className="flex items-center gap-3 bg-[#262626] px-4 py-2 rounded-full border border-[#353535]">
+          <span className="text-xs font-semibold text-[#A3A3A3]">Show Loading State:</span>
+          <button 
+            onClick={() => setIsLoadingState(!isLoadingState)}
+            className={`w-10 h-6 rounded-full relative transition-colors duration-250 focus:outline-none ${isLoadingState ? "bg-[#D2042D]" : "bg-[#353535]"}`}
+          >
+            <span className={`absolute top-1 w-4 h-4 bg-[#F5F5F5] rounded-full transition-transform duration-250 ${isLoadingState ? "left-5" : "left-1"}`}></span>
+          </button>
+        </div>
+      </header>
 
       {isLoadingState ? (
         // ================= LOADING SKELETON STATE =================
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Talent Score Skeleton */}
-          <div className="lg:col-span-2 space-y-8">
-            <div className="glass-card p-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 space-y-6 animate-pulse-subtle">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column (2/3) */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            {/* Talent Score Analytics Card Skeleton */}
+            <div className="bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col gap-6 animate-pulse-subtle">
               <div className="flex justify-between items-center">
-                <div className="h-5 w-32 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                <div className="h-8 w-16 bg-zinc-250 dark:bg-zinc-800 rounded-full"></div>
+                <div className="h-6 w-48 bg-[#353535] rounded"></div>
+                <div className="h-10 w-24 bg-[#353535] rounded"></div>
               </div>
-              <div className="h-64 w-full bg-zinc-100 dark:bg-zinc-900/50 rounded-lg flex items-center justify-center">
-                <div className="h-32 w-32 rounded-full border border-dashed border-zinc-300 dark:border-zinc-700"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#171717] rounded-lg p-6 border border-[#353535]">
+                <div className="h-56 bg-[#262626] rounded-full w-56 mx-auto"></div>
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="h-4 bg-[#262626] rounded w-1/3"></div>
+                      <div className="h-2 bg-[#262626] rounded-full w-full"></div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Verified Skills Skeleton */}
-            <div className="glass-card p-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 space-y-4 animate-pulse-subtle">
-              <div className="h-4 w-40 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-              <div className="flex flex-wrap gap-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-6 w-24 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
-                ))}
-              </div>
+            {/* AI Resume Parsing Card Skeleton */}
+            <div className="bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col gap-4 animate-pulse-subtle">
+              <div className="h-5 bg-[#353535] rounded w-1/4"></div>
+              <div className="h-3 bg-[#353535] rounded w-2/3"></div>
+              <div className="h-32 bg-[#171717] rounded-lg border-2 border-dashed border-[#353535]"></div>
             </div>
 
             {/* Top Job Matches Skeleton */}
             <div className="space-y-4">
-              <div className="h-5 w-36 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse-subtle"></div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="h-6 bg-[#353535] rounded w-1/3 animate-pulse-subtle"></div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="glass-card p-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 h-72 flex flex-col justify-between animate-pulse-subtle"
-                  >
-                    <div className="space-y-3">
+                  <div key={i} className="bg-[#262626] border border-[#353535] rounded-xl p-6 h-80 flex flex-col justify-between animate-pulse-subtle">
+                    <div className="space-y-4">
                       <div className="flex justify-between">
-                        <div className="h-4 w-28 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                        <div className="h-5 w-16 bg-zinc-250 dark:bg-zinc-800 rounded-full"></div>
+                        <div className="h-5 bg-[#353535] rounded w-2/3"></div>
+                        <div className="h-6 bg-[#353535] rounded-full w-12"></div>
                       </div>
-                      <div className="h-3 w-16 bg-zinc-200 dark:bg-zinc-850 rounded"></div>
-                      <div className="h-3 w-36 bg-zinc-100 dark:bg-zinc-900 rounded"></div>
-                      <div className="h-12 w-full bg-zinc-100 dark:bg-zinc-900 rounded"></div>
+                      <div className="h-4 bg-[#353535] rounded w-1/4"></div>
+                      <div className="space-y-2">
+                        <div className="h-3 bg-[#353535] rounded w-full"></div>
+                        <div className="h-3 bg-[#353535] rounded w-5/6"></div>
+                      </div>
                     </div>
                     <div className="flex gap-2">
-                      <div className="h-8 flex-1 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-                      <div className="h-8 flex-1 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
+                      <div className="h-10 bg-[#353535] rounded-lg flex-1"></div>
+                      <div className="h-10 bg-[#353535] rounded-lg flex-1"></div>
                     </div>
                   </div>
                 ))}
@@ -198,16 +192,18 @@ export default function CandidateDashboard() {
             </div>
           </div>
 
-          {/* Right Column: Roadmap Skeleton */}
-          <div className="space-y-6">
-            <div className="glass-card p-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 space-y-6 animate-pulse-subtle">
-              <div className="h-5 w-36 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-              <div className="space-y-4">
+          {/* Right Column (1/3) */}
+          <div className="lg:col-span-4 flex flex-col gap-6 animate-pulse-subtle">
+            <div className="bg-[#262626] border border-[#353535] rounded-xl p-6 h-96">
+              <div className="h-5 bg-[#353535] rounded w-1/2 mb-4"></div>
+              <div className="h-3 bg-[#353535] rounded w-3/4 mb-6"></div>
+              <div className="space-y-6">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex gap-3 border-l-2 border-zinc-200 dark:border-zinc-800 pl-4 py-1">
+                  <div key={i} className="flex gap-4">
+                    <div className="w-5 h-5 rounded-full bg-[#353535]"></div>
                     <div className="space-y-2 flex-1">
-                      <div className="h-4 w-28 bg-zinc-200 dark:bg-zinc-850 rounded"></div>
-                      <div className="h-10 w-full bg-zinc-100 dark:bg-zinc-900 rounded"></div>
+                      <div className="h-4 bg-[#353535] rounded w-1/3"></div>
+                      <div className="h-3 bg-[#353535] rounded w-full"></div>
                     </div>
                   </div>
                 ))}
@@ -217,170 +213,100 @@ export default function CandidateDashboard() {
         </div>
       ) : (
         // ================= LOADED VIEW STATE =================
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Stats & Talent Score & Jobs */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Talent Score summary card */}
-            <div className="glass-card p-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* Left Column (2/3) */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            
+            {/* Talent Score Analytics Card */}
+            <section className="bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col">
               <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-                    <Award className="h-4.5 w-4.5 text-indigo-500" />
-                    Talent Score Analytics
-                  </h2>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    Evaluated based on projects, skills, and community footprint.
-                  </p>
+                <div className="flex items-center gap-2 text-[#F5F5F5]">
+                  <Award className="w-6 h-6 text-[#D2042D]" />
+                  <h2 className="text-lg font-bold">Talent Score Analytics</h2>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-black text-indigo-650 dark:text-indigo-400">
+                  <div className="text-3xl font-extrabold text-[#D2042D] leading-none">
                     {mockTalentScore.overall}
-                    <span className="text-xs text-zinc-400 font-medium">/100</span>
+                    <span className="text-lg text-[#A3A3A3] font-normal">/100</span>
                   </div>
-                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-450 uppercase tracking-wide">
-                    Top 2% Globally
-                  </span>
+                  <div className="text-[10px] font-bold text-[#ecc154] tracking-wider mt-1">TOP 2% GLOBALLY</div>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                {/* Radar chart component */}
-                <div className="md:col-span-2 bg-zinc-50/50 dark:bg-zinc-900/20 rounded-xl border border-zinc-100 dark:border-zinc-900/60 p-2">
-                  <RadarScoreChart data={mockTalentScore.subScores} />
-                </div>
-
-                {/* Score breakdown metrics list */}
-                <div className="space-y-3.5 pl-2">
-                  <h3 className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                    Key Strengths
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-zinc-500 dark:text-zinc-400 font-medium">Problem Solving</span>
-                      <span className="font-bold text-indigo-600 dark:text-indigo-400">95%</span>
-                    </div>
-                    <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-1.5">
-                      <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: "95%" }}></div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-zinc-500 dark:text-zinc-400 font-medium">Coding Ability</span>
-                      <span className="font-bold text-indigo-600 dark:text-indigo-400">92%</span>
-                    </div>
-                    <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-1.5">
-                      <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: "92%" }}></div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-zinc-500 dark:text-zinc-400 font-medium">Technical Consistency</span>
-                      <span className="font-bold text-indigo-600 dark:text-indigo-400">88%</span>
-                    </div>
-                    <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-1.5">
-                      <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: "88%" }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Verified Skill Badges chip list */}
-            <div className="glass-card p-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm">
-              <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-50 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                Verified Skill Credentials
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {verifiedSkills.map((badge) => (
-                  <span
-                    key={badge}
-                    className="text-xs font-semibold px-3 py-1 bg-indigo-50/50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400 rounded-lg border border-indigo-100/50 dark:border-indigo-900/30 flex items-center gap-1 shadow-sm"
-                  >
-                    <span className="w-1 h-1 rounded-full bg-indigo-500"></span>
-                    {badge}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Developer Integrations / GitHub Connection */}
-            <div className="glass-card p-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="space-y-1">
-                <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-50 uppercase tracking-wider flex items-center gap-1.5">
-                  <GitHubIcon className="h-4.5 w-4.5 text-zinc-900 dark:text-zinc-50" />
-                  GitHub Integration
-                </h3>
-                {isLoadingData ? (
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Checking connection status...</p>
-                ) : profileData?.isGitHubConnected ? (
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Connected as <span className="font-bold text-indigo-650 dark:text-indigo-400">@{profileData.githubUsername}</span>
-                  </p>
-                ) : (
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Sync your GitHub repositories to showcase coding activity and build dynamic portfolio scores.
-                  </p>
-                )}
               </div>
               
-              {!isLoadingData && (
-                profileData?.isGitHubConnected ? (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-450 border border-emerald-100/55 dark:border-emerald-900/30 text-xs font-semibold shadow-sm">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Connected
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => {
-                      window.location.href = "/api/auth/github";
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-50 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 text-xs font-bold transition-all shadow-sm shadow-zinc-900/10 hover:scale-[1.01]"
-                  >
-                    <GitHubIcon className="w-4 h-4" />
-                    Connect GitHub
-                  </button>
-                )
-              )}
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center bg-[#171717] rounded-lg p-6 border border-[#353535]">
+                {/* Radar Chart Representation (Using Recharts but styled with brand variables) */}
+                <div style={{ '--primary': '#D2042D', '--secondary': '#D2042D' } as React.CSSProperties} className="relative w-full aspect-square max-w-[280px] mx-auto flex items-center justify-center">
+                  <RadarScoreChart data={mockTalentScore.subScores} />
+                </div>
+                
+                {/* Key Strengths */}
+                <div className="flex flex-col gap-6">
+                  <h3 className="text-sm font-bold text-[#F5F5F5]">Key Strengths</h3>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center text-xs font-semibold">
+                      <span className="text-[#A3A3A3]">Problem Solving</span>
+                      <span className="text-[#F5F5F5]">95%</span>
+                    </div>
+                    <div className="w-full h-2 bg-[#353535] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#D2042D] rounded-full" style={{ width: "95%" }}></div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center text-xs font-semibold">
+                      <span className="text-[#A3A3A3]">Coding Ability</span>
+                      <span className="text-[#F5F5F5]">92%</span>
+                    </div>
+                    <div className="w-full h-2 bg-[#353535] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#D2042D] rounded-full" style={{ width: "92%" }}></div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center text-xs font-semibold">
+                      <span className="text-[#A3A3A3]">Technical Consistency</span>
+                      <span className="text-[#F5F5F5]">88%</span>
+                    </div>
+                    <div className="w-full h-2 bg-[#353535] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#D2042D] rounded-full" style={{ width: "88%" }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
 
-            {/* Resume Vetting Section */}
-            <div className="glass-card p-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm space-y-4">
-              <div className="flex justify-between items-start">
-                <div className="space-y-1 flex-1">
-                  <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-50 uppercase tracking-wider flex items-center gap-1.5">
-                    <FileText className="h-4.5 w-4.5 text-zinc-900 dark:text-zinc-50" />
-                    AI Resume Parsing & Extraction
-                  </h3>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Upload your resume to automatically extract skills, projects, and work history.
-                  </p>
+            {/* AI Resume Parsing & Extraction Card */}
+            <section className="bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col relative">
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex items-center gap-2 text-[#F5F5F5]">
+                  <FileText className="w-5 h-5 text-[#A3A3A3]" />
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-[#A3A3A3]">AI Resume Parsing &amp; Extraction</h2>
                 </div>
                 {profileData?.resumeNeedsReview && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-450 border border-amber-200 dark:border-amber-900/30 text-[10px] font-bold uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-[#ecc154] border border-amber-500/30 text-[10px] font-bold uppercase tracking-wider">
                     <AlertTriangle className="w-3 h-3" />
                     Needs Review
                   </span>
                 )}
               </div>
+              <p className="text-xs text-[#A3A3A3] mb-4">Upload your resume to automatically extract skills, projects, and work history.</p>
 
               {isUploading ? (
-                <div className="py-8 flex flex-col items-center justify-center gap-3 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/20">
-                  <RefreshCw className="h-8 w-8 text-indigo-500 animate-spin" />
-                  <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Extracting and running AI parsing...</p>
-                  <p className="text-[10px] text-zinc-400">This may take a few seconds as the model reviews the text.</p>
+                <div className="py-8 flex flex-col items-center justify-center gap-3 text-center border-2 border-dashed border-[#353535] rounded-lg bg-[#171717]/50">
+                  <RefreshCw className="h-8 w-8 text-[#D2042D] animate-spin" />
+                  <p className="text-xs font-semibold text-[#F5F5F5]">Extracting and running AI parsing...</p>
+                  <p className="text-[10px] text-[#A3A3A3]">This may take a few seconds as the model reviews the text.</p>
                 </div>
               ) : profileData?.resumeData ? (
-                <div className="space-y-4 bg-zinc-50/50 dark:bg-zinc-900/20 border border-zinc-100 dark:border-zinc-900/60 p-4 rounded-xl">
-                  <div className="flex justify-between items-center border-b border-zinc-155 dark:border-zinc-850 pb-3">
+                <div className="space-y-4 bg-[#171717] border border-[#353535] p-4 rounded-lg">
+                  <div className="flex justify-between items-center border-b border-[#353535] pb-3">
                     <div>
-                      <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200">{profileData.resumeData.name}</p>
-                      <p className="text-[10px] text-zinc-400">
+                      <p className="text-xs font-bold text-[#F5F5F5]">{profileData.resumeData.name}</p>
+                      <p className="text-[10px] text-[#A3A3A3]">
                         {profileData.resumeData.email || "No email"} • {profileData.resumeData.phone || "No phone"}
                       </p>
                     </div>
-                    <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300 transition-colors">
-                      <UploadCloud className="w-3.5 h-3.5" />
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#353535] hover:bg-[#353535] text-xs font-semibold text-[#F5F5F5] transition-colors">
+                      <UploadCloud className="w-4 h-4 text-[#A3A3A3]" />
                       Update PDF
                       <input type="file" accept=".pdf" onChange={handleResumeUpload} className="hidden" />
                     </label>
@@ -388,46 +314,46 @@ export default function CandidateDashboard() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                     <div className="space-y-1">
-                      <p className="text-[10px] font-bold text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Latest Experience</p>
+                      <p className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-wider">Latest Experience</p>
                       {profileData.resumeData.experience?.[0] ? (
                         <div>
-                          <p className="font-bold text-zinc-750 dark:text-zinc-350">{profileData.resumeData.experience[0].role}</p>
-                          <p className="text-zinc-500 dark:text-zinc-400 text-[11px]">
+                          <p className="font-bold text-[#F5F5F5]">{profileData.resumeData.experience[0].role}</p>
+                          <p className="text-[#A3A3A3] text-[11px]">
                             {profileData.resumeData.experience[0].company} • {profileData.resumeData.experience[0].start_date} - {profileData.resumeData.experience[0].end_date || "Present"}
                           </p>
                         </div>
                       ) : (
-                        <p className="text-zinc-450 dark:text-zinc-550 italic">No experience found</p>
+                        <p className="text-[#A3A3A3] italic">No experience found</p>
                       )}
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] font-bold text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Latest Education</p>
+                      <p className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-wider">Latest Education</p>
                       {profileData.resumeData.education?.[0] ? (
                         <div>
-                          <p className="font-bold text-zinc-750 dark:text-zinc-350">
+                          <p className="font-bold text-[#F5F5F5]">
                             {profileData.resumeData.education[0].degree} in {profileData.resumeData.education[0].field}
                           </p>
-                          <p className="text-zinc-500 dark:text-zinc-400 text-[11px]">
+                          <p className="text-[#A3A3A3] text-[11px]">
                             {profileData.resumeData.education[0].institution}
                           </p>
                         </div>
                       ) : (
-                        <p className="text-zinc-450 dark:text-zinc-550 italic">No education found</p>
+                        <p className="text-[#A3A3A3] italic">No education found</p>
                       )}
                     </div>
                   </div>
                   
                   {profileData.resumeData.skills && profileData.resumeData.skills.length > 0 && (
-                    <div className="space-y-1.5 border-t border-zinc-150 dark:border-zinc-850 pt-3">
-                      <p className="text-[10px] font-bold text-zinc-450 dark:text-zinc-500 uppercase tracking-wider">Extracted Skills</p>
+                    <div className="space-y-1.5 border-t border-[#353535] pt-3">
+                      <p className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-wider">Extracted Skills</p>
                       <div className="flex flex-wrap gap-1.5">
                         {profileData.resumeData.skills.slice(0, 10).map((skill: string) => (
-                          <span key={skill} className="text-[10px] font-semibold px-2 py-0.5 bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-350 rounded border border-zinc-200/50 dark:border-zinc-800/40">
+                          <span key={skill} className="text-[10px] font-semibold px-2 py-0.5 bg-[#262626] text-[#F5F5F5] rounded border border-[#353535]">
                             {skill}
                           </span>
                         ))}
                         {profileData.resumeData.skills.length > 10 && (
-                          <span className="text-[10px] text-zinc-450 dark:text-zinc-500 font-semibold px-1 py-0.5">
+                          <span className="text-[10px] text-[#A3A3A3] font-semibold px-1 py-0.5">
                             +{profileData.resumeData.skills.length - 10} more
                           </span>
                         )}
@@ -436,90 +362,183 @@ export default function CandidateDashboard() {
                   )}
                 </div>
               ) : (
-                <div className="border border-dashed border-zinc-250 dark:border-zinc-800 hover:border-indigo-400 dark:hover:border-indigo-650 transition-colors p-6 rounded-xl text-center bg-zinc-50/50 dark:bg-zinc-900/10">
-                  <label className="cursor-pointer flex flex-col items-center justify-center gap-2">
-                    <UploadCloud className="h-8 w-8 text-zinc-400 dark:text-zinc-500" />
-                    <span className="text-xs font-bold text-zinc-750 dark:text-zinc-300">Click to Upload Resume (PDF)</span>
-                    <span className="text-[10px] text-zinc-400">Standard PDF formats are processed securely</span>
+                <div className="w-full border-2 border-dashed border-[#353535] hover:border-[#D2042D] transition-colors bg-[#171717] rounded-lg p-8 flex flex-col items-center justify-center gap-3 cursor-pointer group">
+                  <label className="cursor-pointer flex flex-col items-center justify-center gap-3 text-center">
+                    <UploadCloud className="w-10 h-10 text-[#A3A3A3] group-hover:text-[#D2042D] transition-colors" />
+                    <span className="text-sm font-bold text-[#F5F5F5] group-hover:text-[#D2042D] transition-colors">Click to Upload Resume (PDF)</span>
+                    <span className="text-xs text-[#A3A3A3]">Standard PDF formats are processed securely.</span>
                     <input type="file" accept=".pdf" onChange={handleResumeUpload} className="hidden" />
                   </label>
                   {uploadError && (
-                    <p className="mt-2 text-xs font-semibold text-red-650 dark:text-red-400">{uploadError}</p>
+                    <p className="mt-2 text-xs font-semibold text-red-500">{uploadError}</p>
                   )}
                 </div>
               )}
+            </section>
+
+            {/* Developer Integrations / GitHub Connection */}
+            <div className="bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="space-y-1">
+                <h3 className="text-xs font-bold text-[#F5F5F5] uppercase tracking-wider flex items-center gap-1.5">
+                  <GitHubIcon className="h-4.5 w-4.5 text-[#F5F5F5]" />
+                  GitHub Integration
+                </h3>
+                {isLoadingData ? (
+                  <p className="text-xs text-[#A3A3A3]">Checking connection status...</p>
+                ) : profileData?.isGitHubConnected ? (
+                  <p className="text-xs text-[#A3A3A3]">
+                    Connected as <span className="font-bold text-[#D2042D]">@{profileData.githubUsername}</span>
+                  </p>
+                ) : (
+                  <p className="text-xs text-[#A3A3A3]">
+                    Sync your GitHub repositories to showcase coding activity and build dynamic portfolio scores.
+                  </p>
+                )}
+              </div>
+              
+              {!isLoadingData && (
+                profileData?.isGitHubConnected ? (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded bg-[#19a566]/20 text-[#61dd98] border border-[#19a566]/30 text-xs font-semibold">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Connected
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => {
+                      window.location.href = "/api/auth/github";
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded bg-[#F5F5F5] hover:bg-[#F5F5F5]/90 text-[#131313] text-xs font-bold transition-all"
+                  >
+                    <GitHubIcon className="w-4 h-4" />
+                    Connect GitHub
+                  </button>
+                )
+              )}
             </div>
 
-            {/* Top Job Matches */}
-            <div className="space-y-4">
-              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-                <TrendingUp className="h-4.5 w-4.5 text-indigo-500" />
-                Top AI-Generated Job Matches
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {mockJobs.map((job) => (
-                  <JobCard key={job.id} job={job} />
-                ))}
+            {/* Top AI-Generated Job Matches Section */}
+            <section className="flex flex-col gap-4">
+              <div className="flex items-center gap-2 text-[#F5F5F5] mb-2">
+                <TrendingUp className="w-5 h-5 text-[#D2042D]" />
+                <h2 className="text-lg font-bold">Top AI-Generated Job Matches</h2>
               </div>
-            </div>
-          </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {mockJobs.map((job) => {
+                  const isHighMatch = job.matchScore >= 90;
+                  const isMedMatch = job.matchScore >= 80 && job.matchScore < 90;
+                  const badgeColorClass = isHighMatch 
+                    ? "bg-[#19a566]/20 text-[#61dd98]" 
+                    : isMedMatch 
+                      ? "bg-[#b18c22]/20 text-[#ecc154]" 
+                      : "bg-[#353535] text-[#A3A3A3]";
+                  const badgeDotClass = isHighMatch 
+                    ? "bg-[#61dd98]" 
+                    : isMedMatch 
+                      ? "bg-[#ecc154]" 
+                      : "bg-[#A3A3A3]";
 
-          {/* Right Column: Roadmap / Next steps */}
-          <div className="space-y-6">
-            <div className="glass-card p-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm h-full">
-              <div className="mb-6">
-                <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-                  <Compass className="h-4.5 w-4.5 text-indigo-500" />
-                  Your AI Career Roadmap
-                </h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                  AI suggestions to boost match percentages and fill missing gaps.
-                </p>
-              </div>
-
-              <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-155 dark:before:bg-zinc-850">
-                {mockRoadmapSteps.map((step) => (
-                  <div key={step.id} className="relative flex gap-4 pl-8 group">
-                    {/* Circle Node */}
-                    <div className="absolute left-[3px] top-1.5 w-4 h-4 rounded-full border-2 border-white dark:border-zinc-900 bg-indigo-650 flex items-center justify-center shadow-sm">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-zinc-900 dark:text-zinc-50">
-                          {step.title}
-                        </span>
-                        <span
-                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded capitalize ${
-                            step.status === "in_progress"
-                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
-                              : "bg-slate-100 text-slate-650 dark:bg-slate-800 dark:text-zinc-400"
-                          }`}
+                  return (
+                    <div key={job.id} className="bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col justify-between hover:border-[#D2042D] transition-colors hover:bg-[#2b2b2b]">
+                      <div>
+                        <div className="flex justify-between items-start mb-3">
+                          <h3 className="text-base font-bold text-[#F5F5F5] leading-tight pr-2">{job.title}</h3>
+                          <span className={`font-semibold text-xs px-2.5 py-1 rounded-full whitespace-nowrap flex items-center gap-1.5 ${badgeColorClass}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${badgeDotClass}`}></span> 
+                            {job.matchScore}% Match
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-[#A3A3A3] mb-4">{job.company}</p>
+                        
+                        <div className="flex flex-col gap-2 mb-4 text-xs text-[#A3A3A3]">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-3.5 h-3.5 text-[#A3A3A3]" /> 
+                            <span>{job.location}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="w-3.5 h-3.5 text-[#A3A3A3]" /> 
+                            <span>{job.type}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="w-3.5 h-3.5 text-[#A3A3A3]" /> 
+                            <span>{job.salary}</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-[#A3A3A3] line-clamp-2 mb-4">{job.description}</p>
+                        
+                        <div className="flex flex-wrap gap-2 mb-6">
+                          {job.badges.map((tag) => (
+                            <span key={tag} className="bg-[#353535] text-[#F5F5F5] text-[10px] font-semibold px-2 py-0.5 rounded">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 mt-auto">
+                        <button 
+                          onClick={() => router.push(`/candidate/jobs`)}
+                          className="flex-1 bg-transparent border border-[#353535] text-[#F5F5F5] hover:bg-[#353535] transition-colors text-xs font-bold rounded-lg py-2 flex justify-center items-center"
                         >
-                          {step.status === "in_progress" ? "In Progress" : "Up Next"}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-zinc-650 dark:text-zinc-400 leading-relaxed">
-                        {step.description}
-                      </p>
-                      <div className="text-[10px] font-semibold text-zinc-400">
-                        Est: {step.timeEstimate}
+                          View Details
+                        </button>
+                        <button 
+                          onClick={() => router.push(`/candidate/jobs`)}
+                          className="flex-1 bg-[#D2042D] text-white hover:bg-[#D2042D]/90 transition-colors text-xs font-bold rounded-lg py-2 flex justify-center items-center gap-1"
+                        >
+                          Apply Now <ArrowUpRight className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+
+          {/* Right Column (1/3) */}
+          <aside className="lg:col-span-4 h-full">
+            <div className="bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col h-full sticky top-[92px]">
+              <div className="flex items-center gap-2 text-[#F5F5F5] mb-2">
+                <Compass className="w-5 h-5 text-[#D2042D]" />
+                <h2 className="text-base font-bold">Your AI Career Roadmap</h2>
+              </div>
+              <p className="text-xs text-[#A3A3A3] mb-6 pb-4 border-b border-[#353535]">AI suggestions to boost match percentages and fill missing gaps.</p>
+              
+              {/* Roadmap Timeline */}
+              <div className="flex flex-col gap-6 relative flex-grow">
+                {/* Timeline Line */}
+                <div className="absolute left-[11px] top-2 bottom-6 w-[2px] bg-[#353535] rounded-full"></div>
+                
+                {mockRoadmapSteps.map((step) => {
+                  const isInProgress = step.status === "in_progress";
+                  return (
+                    <div key={step.id} className="flex gap-4 relative z-10">
+                      <div className={`w-6 h-6 rounded-full bg-[#131313] border-2 flex-shrink-0 flex items-center justify-center mt-1 ${isInProgress ? "border-[#D2042D]" : "border-[#353535]"}`}>
+                        {isInProgress && <div className="w-2 h-2 rounded-full bg-[#D2042D]"></div>}
+                      </div>
+                      <div className="flex flex-col gap-1 w-full text-xs">
+                        <div className="flex justify-between items-start gap-2">
+                          <h4 className="font-bold text-[#F5F5F5] text-sm leading-snug">{step.title}</h4>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${isInProgress ? "bg-[#b18c22]/20 text-[#ecc154]" : "bg-[#353535] text-[#F5F5F5] border border-[#353535]"}`}>
+                            {isInProgress ? "In Progress" : "Up Next"}
+                          </span>
+                        </div>
+                        <p className="text-[#A3A3A3] mt-1 leading-relaxed">{step.description}</p>
+                        <span className="text-[10px] text-[#A3A3A3] mt-1">Est: {step.timeEstimate}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* Informational callout card */}
-              <div className="mt-8 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-100 dark:border-zinc-850 flex gap-2">
-                <Info className="h-4 w-4 text-indigo-500 shrink-0 mt-0.5" />
-                <p className="text-[10px] leading-relaxed text-zinc-500 dark:text-zinc-400 font-medium">
-                  Completing roadmap steps updates your credentials and broadcasts improvements instantly to relevant recruiters.
-                </p>
+              {/* Info Box */}
+              <div className="bg-[#171717] border border-[#353535] rounded-lg p-4 mt-6 flex gap-3 items-start">
+                <Info className="w-5 h-5 text-[#A3A3A3] flex-shrink-0 mt-0.5" />
+                <p className="text-[10px] leading-relaxed text-[#A3A3A3]">Completing roadmap steps updates your credentials and broadcasts improvements instantly to relevant recruiters.</p>
               </div>
             </div>
-          </div>
+          </aside>
         </div>
       )}
     </div>
