@@ -120,4 +120,80 @@ body {
   animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Force CSS rebuild to clear placeholder background error cache */
+/* Custom Glow & Glass Classes from HireSpark Design */
+.glass-card-dark {
+  background: rgba(20, 15, 15, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(210, 4, 45, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.text-glow-crimson {
+  text-shadow: 0 0 15px rgba(210, 4, 45, 0.5);
+}
+
+.crimson-gradient {
+  background: linear-gradient(135deg, #d2042d 0%, #5c000e 100%);
+}
+
+.grain-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.025;
+  background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCBsQynBCo7Hh6m0n7tNLuTC6brNqZspyfBPkiApAbmCHacqTvGwr5SwnpPKyIlidRpfF0O0iALWQF0LWIxlUgyJaHVsEXnxCAHlqr7dC5B9pt7m_OUAGWpLp79Gpsqo5Y_3aecapWyQ_LFxi2JmWHirGJJT1Yyg4Z33cWIkUxJQI1tes871zEZAWklbrN1csXj3vtvqWBUUn_JT28-f7U8wm-KTdW7NZLIz0uN5o85RTXROpDcLZM0");
+}
+
+/* Floating Animations */
+@keyframes float-slow-1 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(40px, -60px) scale(1.15);
+  }
+}
+
+@keyframes float-slow-2 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1.05);
+  }
+  50% {
+    transform: translate(-50px, 40px) scale(0.9);
+  }
+}
+
+.animate-float-1 {
+  animation: float-slow-1 18s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: float-slow-2 22s ease-in-out infinite;
+}
+
+/* Background Panning Animation */
+@keyframes slow-pan {
+  0%, 100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+}
+
+.animate-slow-pan {
+  animation: slow-pan 40s linear infinite;
+  background-size: 150% 150%;
+}
+
+.radar-grid {
+  background-image: radial-gradient(circle, rgba(210, 4, 45, 0.25) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+
+
