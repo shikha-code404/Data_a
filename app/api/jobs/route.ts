@@ -107,23 +107,33 @@ export async function POST(req: Request) {
       throw new Error(`Failed to create job in database: ${createError?.message}`);
     }
 
-    // 4. Automatically Generate Job Vector Embedding using @xenova/transformers
-    console.log(`[Auto-Embedding] Generating vector for job_id: ${newJob.id}...`);
-    const embeddingResult = await generateJobEmbedding(newJob.id);
+    // 4. Automatically Generate Job Vector Embedding
+    let embeddingResult = { vectorDimension: 384, vectorSample: [] };
+    try {
+      console.log(`[Auto-Embedding] Generating vector for job_id: ${newJob.id}...`);
+      const res = await generateJobEmbedding(newJob.id);
+      if (res) {
+        embeddingResult = { vectorDimension: res.embeddingLength, vectorSample: res.vectorSample as any };
+      }
+    } catch (embErr: any) {
+      console.warn(`[Auto-Embedding Note] Embedding generation skipped/failed: ${embErr.message}`);
+    }
 
     // 5. Automatically Trigger Candidate-Job Matching Pipeline
-    console.log(`[Auto-Matching] Running matching pipeline for job_id: ${newJob.id}...`);
-    const matchingCandidates = await runJobMatchingEngine(newJob.id);
+    let matchingCandidates: any[] = [];
+    try {
+      console.log(`[Auto-Matching] Running matching pipeline for job_id: ${newJob.id}...`);
+      matchingCandidates = await runJobMatchingEngine(newJob.id);
+    } catch (matchErr: any) {
+      console.warn(`[Auto-Matching Note] Matching pipeline skipped/failed: ${matchErr.message}`);
+    }
 
     // 6. Return created job, embedding status, and auto-generated candidate recommendations
     return NextResponse.json({
       success: true,
-      message: "Job posting created, vector embedding generated, and candidates matched automatically.",
+      message: "Job posting created successfully and saved to database.",
       job: newJob,
-      embedding: {
-        vectorDimension: embeddingResult.embeddingLength,
-        vectorSample: embeddingResult.vectorSample,
-      },
+      embedding: embeddingResult,
       matched_candidates_count: matchingCandidates.length,
       matched_candidates: matchingCandidates,
     });
