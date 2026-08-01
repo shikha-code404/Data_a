@@ -354,7 +354,8 @@ Do not include any code fences, explanations, markdown formatting, or text outsi
     const rawResponse = await callAgent("career_guidance", {
       talent_profile: talentProfile,
       talent_score: talentScore,
-      skill_verifications: verificationsList
+      skill_verifications: verificationsList,
+      timestamp: Date.now()
     });
 
     const parsed = CareerGuidanceSchema.safeParse(rawResponse);
@@ -381,7 +382,8 @@ INPUT DETAILS:
         talent_score: talentScore,
         skill_verifications: verificationsList,
         prompt: retryPrompt,
-        validation_errors: errorList
+        validation_errors: errorList,
+        timestamp: Date.now()
       });
 
       const parsedRetry = CareerGuidanceSchema.safeParse(rawRetryResponse);

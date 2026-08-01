@@ -16,7 +16,7 @@ import { buildCandidateResume } from "@/lib/resume/resumeService";
  */
 export async function POST(req: NextRequest) {
   try {
-    let body: { candidate_id?: string; template?: string; force_fresh?: boolean } = {};
+    let body: { candidate_id?: string; template?: string; force_fresh?: boolean; target_company?: string | null } = {};
     try {
       body = await req.json();
     } catch {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { candidate_id, template, force_fresh } = body;
+    const { candidate_id, template, force_fresh, target_company } = body;
 
     if (!candidate_id || typeof candidate_id !== "string") {
       return NextResponse.json(
@@ -43,8 +43,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`[API /api/resume/generate] Building resume for candidate ${candidate_id} using template: ${templateName}`);
-    const result = await buildCandidateResume(candidate_id, templateName, !!force_fresh);
+    const targetCompany = target_company || null;
+    if (targetCompany !== null && !["google", "microsoft", "amazon", "meta"].includes(targetCompany)) {
+      return NextResponse.json(
+        { error: "Invalid target_company. Choose 'google', 'microsoft', 'amazon', 'meta', or null." },
+        { status: 400 }
+      );
+    }
+
+    console.log(`[API /api/resume/generate] Building resume for candidate ${candidate_id} using template: ${templateName}, targetCompany: ${targetCompany}`);
+    const result = await buildCandidateResume(candidate_id, templateName, targetCompany, !!force_fresh);
 
     return NextResponse.json(result, { status: 200 });
   } catch (err: any) {

@@ -108,12 +108,14 @@ export async function GET(
   </div>
 
   <script>
-    // Trigger print dialogue automatically on load after 1s delay
-    window.onload = () => {
-      setTimeout(() => {
-        window.print();
-      }, 1000);
-    };
+    // Trigger print dialogue automatically on load after 1s delay unless in preview mode
+    if (!window.location.search.includes('preview=true')) {
+      window.onload = () => {
+        setTimeout(() => {
+          window.print();
+        }, 1000);
+      };
+    }
   </script>
 </body>
 </html>

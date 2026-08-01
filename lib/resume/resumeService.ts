@@ -43,6 +43,7 @@ export const StructuredResumeSchema = z.object({
     issuer: z.string(),
     year: z.number().nullable(),
   })),
+  target_company: z.string().nullable().optional(),
 });
 
 export type StructuredResume = z.infer<typeof StructuredResumeSchema>;
@@ -102,6 +103,7 @@ function sanitizeResume(raw: any): StructuredResume {
           year: typeof c?.year === "number" ? c.year : null,
         }))
       : [],
+    target_company: typeof raw?.target_company === "string" ? raw.target_company : null,
   };
 }
 
@@ -111,6 +113,7 @@ function sanitizeResume(raw: any): StructuredResume {
 export async function buildCandidateResume(
   candidateId: string,
   templateName: string,
+  targetCompany: string | null = null,
   forceFresh = false
 ): Promise<ResumeGenerationResult> {
   const adminClient = getSupabaseAdmin();
@@ -140,17 +143,25 @@ export async function buildCandidateResume(
 
   // 2. Return cached resume if not forceFresh
   if (!forceFresh) {
-    const { data: cached, error: cacheErr } = await adminClient
+    let query = adminClient
       .from("resumes")
       .select("*")
       .eq("candidate_id", candidateId)
-      .eq("template_name", templateName)
+      .eq("template_name", templateName);
+
+    if (targetCompany === null) {
+      query = query.is("target_company", null);
+    } else {
+      query = query.eq("target_company", targetCompany);
+    }
+
+    const { data: cached, error: cacheErr } = await query
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (cached) {
-      console.log(`[Resume Service] Found cached resume for ${candidateId} (template: ${templateName})`);
+      console.log(`[Resume Service] Found cached resume for ${candidateId} (template: ${templateName}, target_company: ${targetCompany})`);
       return {
         success: true,
         resume_id: cached.id,
@@ -196,8 +207,11 @@ Do not include any code fences, markdown blocks, extra keys, or explanations.`;
   let needsReview = false;
 
   try {
-    console.log(`[Resume Service] Calling callAgent for candidate ${candidateId}`);
-    const rawResponse = await callAgent("resume_builder", { talent_profile: talentProfile });
+    console.log(`[Resume Service] Calling callAgent for candidate ${candidateId} (target_company: ${targetCompany})`);
+    const rawResponse = await callAgent("resume_builder", {
+      talent_profile: talentProfile,
+      target_company: targetCompany
+    });
 
     const parsed = StructuredResumeSchema.safeParse(rawResponse);
     if (parsed.success) {
@@ -218,6 +232,7 @@ ${JSON.stringify(talentProfile)}`;
 
       const rawRetryResponse = await callAgent("resume_builder", {
         talent_profile: talentProfile,
+        target_company: targetCompany,
         prompt: retryPrompt,
         validation_errors: errorList,
       });
@@ -247,6 +262,7 @@ ${JSON.stringify(talentProfile)}`;
       .insert({
         candidate_id: candidateId,
         template_name: templateName,
+        target_company: targetCompany,
         resume_json: finalResume,
         needs_review: needsReview,
         created_at: new Date().toISOString(),

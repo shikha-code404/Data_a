@@ -36,6 +36,79 @@ export function extractJSON(text: string): any {
   return JSON.parse(match[0]);
 }
 
+const COMPANY_RESUME_GUIDANCE: Record<string, string> = {
+  google: `Google favors concise, impact-driven bullets: prioritize
+measurable outcomes (scale, performance, users impacted) over task
+descriptions where the candidate's real data supports it. Favor clarity
+and brevity over buzzwords. Do not add specific numbers not present in the
+candidate's original data — only reorder/rephrase toward emphasizing
+whatever quantifiable outcomes already exist in their profile.`,
+
+  amazon: `Amazon's hiring process is built around their Leadership
+Principles (e.g. Customer Obsession, Ownership, Bias for Action, Deliver
+Results). Where the candidate's real experience naturally reflects one of
+these principles, phrase that bullet using STAR-style structure (brief
+situation/action/result) using only facts already present in their data.
+Do not force-fit a Leadership Principle onto experience that doesn't
+support it.`,
+
+  meta: `Meta values execution speed, ownership of end-to-end features,
+and impact at scale. Emphasize the candidate's real experience shipping
+features, iterating quickly, or owning a product area end-to-end, using
+only what's in their actual history — do not add fabricated scale claims.`,
+
+  microsoft: `Microsoft values collaborative, cross-team impact and a
+growth-mindset framing. Emphasize the candidate's genuine collaborative
+or mentoring experience and technical depth. Favor a professional, precise
+tone over aggressive self-promotion language.`
+};
+
+const GENERAL_RESUME_GUIDANCE = `Use a clean, professional, universally
+ATS-compatible tone. No company-specific slant.`;
+
+function buildResumeBuilderSystemPrompt(targetCompany: string | null): string {
+  const companyGuidance = targetCompany
+    ? COMPANY_RESUME_GUIDANCE[targetCompany]
+    : GENERAL_RESUME_GUIDANCE;
+
+  return `You are HireSpark's AI Resume Builder agent. Given a candidate's
+talent profile, produce ONLY a valid JSON object matching this EXACT
+structure — no markdown fences, no explanations, no extra top-level keys:
+
+{
+  "name": "string",
+  "contact": { "email": "string", "phone": "string", "location": "string", "github": "string or null" },
+  "summary": "string - 2-3 sentences",
+  "experience": [
+    { "company": "string", "role": "string", "start_date": "string", "end_date": "string or null", "description": "string" }
+  ],
+  "education": [
+    { "institution": "string", "degree": "string", "field": "string", "start_year": number or null, "end_year": number or null, "gpa": "string or null" }
+  ],
+  "projects": [
+    { "name": "string", "description": "string", "technologies": ["string"] }
+  ],
+  "skills": ["string"],
+  "certifications": [
+    { "name": "string", "issuer": "string", "year": number or null }
+  ]
+}
+
+TAILORING INSTRUCTIONS FOR THIS RESUME:
+${companyGuidance}
+
+RULES:
+- Use ONLY information present in the candidate's profile data below. Do
+  NOT invent skills, employers, metrics, or experience the candidate did
+  not provide.
+- You MAY reorder skills, reorder experience bullets, and rephrase
+  descriptions to emphasize relevant existing experience — you may NOT
+  fabricate new content to fit the target company's preferences.
+- Every field above is required. Omit no key. Rename no key.
+- If a section has no real data (e.g. no certifications), return an empty
+  array for that section — never a placeholder entry.`;
+}
+
 /**
  * Executes an agent call by type.
  * Checks Cache -> Tries Local Ollama -> Falls back to Hugging Face -> Saves Cache -> Returns JSON.
@@ -64,13 +137,597 @@ export async function callAgent(agentType: string, input: object): Promise<objec
   let responseObj: any = null;
   let source = "";
 
-  // 2. Try Ollama (Local qwen3.5:4b)
+  if (agentType === "talent_score") {
+    // For talent_score, Hugging Face is primary, Ollama qwen3.5:cloud is secondary
+    try {
+      const apiKey = process.env.HF_API_KEY;
+      if (!apiKey || apiKey.includes("placeholder")) {
+        throw new Error("Hugging Face API key is missing or is placeholder.");
+      }
+
+      console.log(`[HF Request] agentType: talent_score, modelId: Qwen/Qwen3-32B`);
+      // Try with cerebras provider first
+      let res = await fetch("https://router.huggingface.co/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "Qwen/Qwen3-32B:cerebras",
+          messages: [
+            {
+              role: "system",
+              content: `You are an AI agent of type '${agentType}'. Respond ONLY with a valid JSON object.`
+            },
+            {
+              role: "user",
+              content: JSON.stringify(input)
+            }
+          ],
+          max_tokens: 1024,
+          temperature: 0.3,
+          extra_body: {
+            enable_thinking: false
+          }
+        })
+      });
+
+      // Fallback to standard provider if cerebras is offline
+      if (!res.ok) {
+        console.warn(`HF Qwen/Qwen3-32B with Cerebras provider failed with status ${res.status}. Trying Qwen/Qwen3-32B without specific provider...`);
+        res = await fetch("https://router.huggingface.co/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "Qwen/Qwen3-32B",
+            messages: [
+              {
+                role: "system",
+                content: `You are an AI agent of type '${agentType}'. Respond ONLY with a valid JSON object.`
+              },
+              {
+                role: "user",
+                content: JSON.stringify(input)
+              }
+            ],
+            max_tokens: 1024,
+            temperature: 0.3,
+            extra_body: {
+              enable_thinking: false
+            }
+          })
+        });
+      }
+
+      if (!res.ok) {
+        throw new Error(`HF Inference Router responded with status ${res.status}`);
+      }
+
+      const resData = await res.json();
+      const rawContent = resData.choices?.[0]?.message?.content ?? "";
+      responseObj = extractJSON(rawContent);
+      source = "huggingface";
+      console.log(`[HF Success] Response parsed successfully for talent_score.`);
+    } catch (hfErr: any) {
+      console.warn(`Hugging Face primary failed for talent_score: ${hfErr.message}. Falling back to Ollama.`);
+
+      // 2. Try Ollama (Local qwen3.5:cloud) as fallback
+      const ollamaHost = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
+      console.log(`[Ollama Fallback] agentType: talent_score, host: ${ollamaHost}, model: qwen3.5:cloud`);
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+        const res = await fetch(`${ollamaHost}/api/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "qwen3.5:cloud",
+            messages: [
+              {
+                role: "system",
+                content: `You are an AI agent of type '${agentType}'. Respond ONLY with a valid JSON object representing your output. Do not include any explanations, markdown code fences, or text outside the JSON.`,
+              },
+              {
+                role: "user",
+                content: JSON.stringify(input),
+              },
+            ],
+            stream: false,
+            options: {
+              temperature: 0.3,
+            },
+            format: "json",
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+          throw new Error(`Ollama responded with status ${res.status}`);
+        }
+
+        const data = await res.json();
+        const rawContent = data.message?.content;
+        if (!rawContent) {
+          throw new Error("Ollama returned empty message content");
+        }
+
+        responseObj = extractJSON(rawContent);
+        source = "ollama";
+        console.log(`[Ollama Success] Response parsed successfully for talent_score.`);
+      } catch (ollamaErr: any) {
+        console.warn(`Ollama fallback failed for talent_score: ${ollamaErr.message}. Applying local intelligence fallback.`);
+
+        const talentProfile = (input as any).talent_profile || {};
+        const github = talentProfile.github || {};
+        const resume = talentProfile.resume || {};
+
+        const commits = github.commits?.total_last_12_months || 0;
+        const prs = (github.pull_requests?.merged || 0) + (github.pull_requests?.opened || 0);
+        const stars = github.top_5_repos_by_stars?.reduce((acc: number, r: any) => acc + (r.stars || 0), 0) || 0;
+        const reposCount = github.repositories?.length || 0;
+        const skillsCount = Array.isArray(resume.skills) ? resume.skills.length : 0;
+        const expCount = Array.isArray(resume.experience) ? resume.experience.length : 0;
+        const projCount = Array.isArray(resume.projects) ? resume.projects.length : 0;
+
+        const coding = Math.min(98, Math.max(45, 45 + Math.min(30, commits / 5) + Math.min(15, skillsCount * 2) + Math.min(10, reposCount)));
+        const projQuality = Math.min(98, Math.max(40, 40 + Math.min(30, stars * 10) + Math.min(20, projCount * 4)));
+        const leadership = Math.min(98, Math.max(35, 35 + Math.min(40, expCount * 10) + Math.min(20, prs * 5)));
+        const problemSolving = Math.min(98, Math.max(45, 45 + Math.min(30, commits / 6) + Math.min(20, projCount * 3)));
+        const innovation = Math.min(98, Math.max(40, 40 + Math.min(30, stars * 15) + Math.min(25, reposCount * 3)));
+        const community = Math.min(98, Math.max(30, 30 + Math.min(40, prs * 8) + Math.min(25, stars * 5)));
+        const consistency = Math.min(98, Math.max(40, 40 + Math.min(40, commits / 4) + Math.min(20, expCount * 5)));
+
+        const overall = Math.round((coding + projQuality + leadership + problemSolving + innovation + community + consistency) / 7);
+
+        responseObj = {
+          scores: {
+            coding_ability: coding,
+            project_quality: projQuality,
+            leadership,
+            problem_solving: problemSolving,
+            innovation,
+            community_participation: community,
+            technical_consistency: consistency
+          },
+          overall_score: overall,
+          reasoning: `Heuristic score calculated locally based on ${commits} commits, ${prs} PRs, ${stars} stars, and ${skillsCount} verified skills.`
+        };
+        source = "local_talent_score";
+      }
+    }
+
+    // 3. Cache and return response
+    try {
+      console.log(`[Cache Write] Writing response to cache. Hash: ${inputHash}`);
+      await adminClient.from("agent_responses").upsert({
+        agent_type: agentType,
+        input_hash: inputHash,
+        input_payload: input,
+        response: responseObj,
+        created_at: new Date().toISOString(),
+      }, {
+        onConflict: "agent_type,input_hash"
+      });
+    } catch (err) {
+      console.error("Failed to cache agent response to database:", err);
+    }
+
+    return responseObj;
+  }
+
+  if (agentType === "career_guidance") {
+    // 1. Try Groq as primary
+    try {
+      const apiKey = process.env.GROQ_API_KEY;
+      if (!apiKey || apiKey.includes("placeholder")) {
+        throw new Error("Groq API key is missing or is placeholder.");
+      }
+
+      console.log(`[Groq Request] agentType: career_guidance, modelId: llama-3.3-70b-versatile`);
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            {
+              role: "system",
+              content: `You are HireSpark's AI Career Guidance agent. Given a candidate's talent profile and talent score, respond with ONLY a valid JSON object matching this EXACT structure — no markdown code fences, no explanations, no text outside the JSON, and no extra top-level keys beyond these four:
+ 
+{
+  "skill_gaps": [
+    {
+      "skill": "string - name of the skill gap",
+      "current_level": "string - e.g. Beginner, Intermediate, Advanced",
+      "target_level": "string - e.g. Intermediate, Advanced",
+      "why": "string - one sentence explaining why this gap matters for this candidate"
+    }
+  ],
+  "recommended_certifications": [
+    {
+      "name": "string - full certification name",
+      "provider": "string - issuing organization",
+      "reason": "string - one sentence on why this certification helps this candidate"
+    }
+  ],
+  "career_roadmap": [
+    {
+      "stage": "string - name of this roadmap stage",
+      "timeframe": "string - e.g. '1-3 months'",
+      "milestones": ["string - concrete milestone", "string - concrete milestone"]
+    }
+  ],
+  "reasoning": "string - 1-3 sentences summarizing the overall career guidance rationale"
+}
+ 
+Rules:
+- skill_gaps: provide 1-4 entries based on the candidate's actual skills/profile
+- recommended_certifications: provide 1-4 entries
+- career_roadmap: provide 2-3 stages, each with 1-3 milestones
+- Every field above is required. Do not omit any key. Do not rename any key.
+- Base your response on the candidate data provided in the user message — do not invent skills or experience not present in the input.`
+            },
+            {
+              role: "user",
+              content: JSON.stringify(input)
+            }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.3
+        })
+      });
+      if (!res.ok) {
+        throw new Error(`Groq API responded with status ${res.status}`);
+      }
+
+      const resData = await res.json();
+      const rawContent = resData.choices?.[0]?.message?.content ?? "";
+      responseObj = extractJSON(rawContent);
+      source = "groq";
+      console.log(`[Groq Success] Response parsed successfully for career_guidance.`);
+    } catch (groqErr: any) {
+      console.warn(`Groq primary failed for career_guidance: ${groqErr.message}. Falling back to Ollama.`);
+
+      // 2. Try Ollama (Local qwen3.5:cloud) as secondary fallback
+      const ollamaHost = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
+      console.log(`[Ollama Fallback] agentType: career_guidance, host: ${ollamaHost}, model: qwen3.5:cloud`);
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+        const res = await fetch(`${ollamaHost}/api/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "qwen3.5:cloud",
+            messages: [
+              {
+                role: "system",
+                content: `You are an AI agent of type '${agentType}'. Respond ONLY with a valid JSON object representing your output. Do not include any explanations, markdown code fences, or text outside the JSON.`,
+              },
+              {
+                role: "user",
+                content: JSON.stringify(input),
+              },
+            ],
+            stream: false,
+            options: {
+              temperature: 0.3,
+            },
+            format: "json",
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+          throw new Error(`Ollama responded with status ${res.status}`);
+        }
+
+        const data = await res.json();
+        const rawContent = data.message?.content;
+        if (!rawContent) {
+          throw new Error("Ollama returned empty message content");
+        }
+
+        responseObj = extractJSON(rawContent);
+        source = "ollama";
+        console.log(`[Ollama Success] Response parsed successfully for career_guidance.`);
+      } catch (ollamaErr: any) {
+        console.warn(`Ollama fallback failed for career_guidance: ${ollamaErr.message}. Falling back to Hugging Face.`);
+
+        // 3. Try Hugging Face as tertiary fallback
+        try {
+          const hfApiKey = process.env.HF_API_KEY;
+          if (!hfApiKey || hfApiKey.includes("placeholder")) {
+            throw new Error("Hugging Face API key is missing or is placeholder.");
+          }
+
+          const modelId = process.env.HF_MODEL_ID || "Qwen/Qwen3.5-4B";
+          console.log(`[HF Fallback] agentType: career_guidance, modelId: ${modelId}`);
+
+          const hf = new HfInference(hfApiKey);
+          const completion = await hf.chatCompletion({
+            model: modelId,
+            messages: [
+              {
+                role: "system",
+                content: `You are an AI agent of type '${agentType}'. Respond ONLY with a valid JSON object. Do not include any explanations, markdown code fences, or text outside the JSON.`,
+              },
+              {
+                role: "user",
+                content: JSON.stringify(input),
+              },
+            ],
+            max_tokens: 1024,
+            temperature: 0.3,
+          });
+
+          const rawContent = completion.choices[0]?.message?.content ?? "";
+          responseObj = extractJSON(rawContent);
+          source = "huggingface";
+          console.log(`[HF Success] Response parsed successfully for career_guidance.`);
+        } catch (hfErr: any) {
+          console.warn(`External LLM endpoints unreachable and Ollama failed. Applying local intelligence parser for career_guidance.`);
+
+          // Local fallback heuristics for career guidance
+          const talentProfile = (input as any).talent_profile || {};
+          const talentScore = (input as any).talent_score || {};
+          const resume = talentProfile.resume || {};
+          const skills = Array.isArray(resume.skills) ? resume.skills : [];
+
+          responseObj = {
+            reasoning: "Local heuristic fallback assessment based on skills and background.",
+            skill_gaps: [
+              {
+                skill: skills.includes("React") ? "Next.js" : "React",
+                current_level: "Beginner",
+                target_level: "Intermediate",
+                why: "To bridge the gap between basic front-end and advanced modern full-stack development."
+              },
+              {
+                skill: "Docker",
+                current_level: "Beginner",
+                target_level: "Intermediate",
+                why: "Essential for modern containerized microservice architectures."
+              }
+            ],
+            career_roadmap: [
+              {
+                stage: "Advanced Framework Mastery",
+                timeframe: "1-3 months",
+                milestones: ["Build 2 full-stack projects using modern architectural patterns."]
+              },
+              {
+                stage: "DevOps & Deployment",
+                timeframe: "3-6 months",
+                milestones: ["Containerize applications and deploy onto AWS or GCP platforms."]
+              }
+            ],
+            recommended_certifications: [
+              {
+                name: "AWS Certified Developer - Associate",
+                provider: "Amazon Web Services",
+                reason: "Demonstrates cloud capabilities and increases marketability."
+              }
+            ]
+          };
+          source = "local_career_guidance";
+        }
+      }
+    }
+
+    // 4. Cache and return response
+    try {
+      console.log(`[Cache Write] Writing response to cache. Hash: ${inputHash}`);
+      await adminClient.from("agent_responses").upsert({
+        agent_type: agentType,
+        input_hash: inputHash,
+        input_payload: input,
+        response: responseObj,
+        created_at: new Date().toISOString(),
+      }, {
+        onConflict: "agent_type,input_hash"
+      });
+    } catch (err) {
+      console.error("Failed to cache agent response to database:", err);
+    }
+
+    return responseObj;
+  }
+
+  if (agentType === "resume_builder") {
+    const targetCompany = (input as any).target_company || null;
+    const systemPrompt = buildResumeBuilderSystemPrompt(targetCompany);
+
+    // 1. Try Ollama (Local qwen3.5:cloud) as primary
+    const ollamaHost = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
+    console.log(`[Ollama Request] agentType: resume_builder, host: ${ollamaHost}, model: qwen3.5:cloud, targetCompany: ${targetCompany}`);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 seconds timeout
+
+      const res = await fetch(`${ollamaHost}/api/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "qwen3.5:cloud",
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt,
+            },
+            {
+              role: "user",
+              content: JSON.stringify(input),
+            },
+          ],
+          stream: false,
+          options: {
+            temperature: 0.3,
+          },
+          format: "json", // JSON enforcement
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        throw new Error(`Ollama responded with status ${res.status}`);
+      }
+
+      const data = await res.json();
+      const rawContent = data.message?.content;
+      if (!rawContent) {
+        throw new Error("Ollama returned empty message content");
+      }
+
+      responseObj = extractJSON(rawContent);
+      source = "ollama";
+      console.log(`[Ollama Success] Response parsed successfully for resume_builder.`);
+    } catch (ollamaErr: any) {
+      console.warn(`Ollama primary failed for resume_builder: ${ollamaErr.message}. Falling back to Hugging Face.`);
+
+      // 2. Try Hugging Face as secondary fallback
+      try {
+        const apiKey = process.env.HF_API_KEY;
+        if (!apiKey || apiKey.includes("placeholder")) {
+          throw new Error("Hugging Face API key is missing or is placeholder.");
+        }
+
+        const modelId = process.env.HF_MODEL_ID || "Qwen/Qwen3.5-4B";
+        console.log(`[HF Fallback] agentType: resume_builder, modelId: ${modelId}`);
+
+        const hf = new HfInference(apiKey);
+        const completion = await hf.chatCompletion({
+          model: modelId,
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt,
+            },
+            {
+              role: "user",
+              content: JSON.stringify(input),
+            },
+          ],
+          max_tokens: 1024,
+          temperature: 0.3,
+        });
+
+        const rawContent = completion.choices[0]?.message?.content ?? "";
+        responseObj = extractJSON(rawContent);
+        source = "huggingface";
+        console.log(`[HF Success] Response parsed successfully for resume_builder.`);
+      } catch (hfErr: any) {
+        console.warn(`External LLM endpoints unreachable and Ollama failed. Applying local intelligence parser for resume_builder.`);
+        
+        // 3. Local fallback heuristics
+        const talentProfile = (input as any).talent_profile || {};
+        const resume = talentProfile.resume || {};
+        const skills = Array.isArray(resume.skills) ? resume.skills : [];
+        const experience = Array.isArray(resume.experience) ? resume.experience : [];
+        const education = Array.isArray(resume.education) ? resume.education : [];
+        const projects = Array.isArray(resume.projects) ? resume.projects : [];
+        const certifications = Array.isArray(resume.certifications) ? resume.certifications : [];
+
+        const candidateName = resume.name || talentProfile.name || "Candidate User";
+        const email = resume.email || talentProfile.email || "candidate@hirespark.com";
+        const phone = resume.phone || talentProfile.phone || "+1 (555) 019-2834";
+        const location = resume.location || talentProfile.location || "San Francisco, CA";
+
+        let summaryText = `Results-driven software professional specializing in ${skills.slice(0, 3).join(", ") || "software engineering"}. Proven track record of delivering high-quality web services and products.`;
+        if (targetCompany) {
+          summaryText += ` (Tailored for ${targetCompany.toUpperCase()})`;
+        }
+
+        responseObj = {
+          name: candidateName,
+          contact: {
+            email,
+            phone,
+            location,
+            github: talentProfile.github_username || null
+          },
+          summary: summaryText,
+          experience: experience.map((exp: any) => ({
+            company: exp.company || "Company",
+            role: exp.role || "Developer",
+            start_date: String(exp.start_date || exp.start_year || "Unknown"),
+            end_date: exp.end_date ? String(exp.end_date) : null,
+            description: exp.description || "Contributed to core application development."
+          })),
+          education: education.map((edu: any) => ({
+            institution: edu.institution || "University",
+            degree: edu.degree || "Degree",
+            field: edu.field || "Computer Science",
+            start_year: typeof edu.start_year === "number" ? edu.start_year : null,
+            end_year: typeof edu.end_year === "number" ? edu.end_year : null,
+            gpa: edu.gpa ? String(edu.gpa) : null
+          })),
+          projects: projects.map((proj: any) => ({
+            name: proj.name || "Software Project",
+            description: proj.description || "Designed and built full-stack solutions.",
+            technologies: Array.isArray(proj.technologies) ? proj.technologies : []
+          })),
+          skills: skills,
+          certifications: certifications.map((c: any) => ({
+            name: c.name || "Certification",
+            issuer: c.issuer || "Authority",
+            year: typeof c.year === "number" ? c.year : null
+          })),
+          target_company: targetCompany,
+          evaluation_method: "local_fallback"
+        };
+        source = "local_resume_builder";
+      }
+    }
+
+    // 4. Cache and return response
+    try {
+      console.log(`[Cache Write] Writing response to cache. Hash: ${inputHash}`);
+      await adminClient.from("agent_responses").upsert({
+        agent_type: agentType,
+        input_hash: inputHash,
+        input_payload: input,
+        response: responseObj,
+        created_at: new Date().toISOString(),
+      }, {
+        onConflict: "agent_type,input_hash"
+      });
+    } catch (err) {
+      console.error("Failed to cache agent response to database:", err);
+    }
+
+    return responseObj;
+  }
+
+  // 1. Try Ollama (Local qwen3.5:cloud) as primary
   const ollamaHost = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
-  console.log(`[Ollama Request] agentType: ${agentType}, host: ${ollamaHost}`);
+  console.log(`[Ollama Request] agentType: ${agentType}, host: ${ollamaHost}, model: qwen3.5:cloud`);
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 seconds timeout for local model response
+    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 seconds timeout for local model response
 
     const res = await fetch(`${ollamaHost}/api/chat`, {
       method: "POST",
@@ -78,7 +735,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "qwen3.5:4b",
+        model: "qwen3.5:cloud",
         messages: [
           {
             role: "system",
@@ -112,44 +769,114 @@ export async function callAgent(agentType: string, input: object): Promise<objec
 
     responseObj = extractJSON(rawContent);
     source = "ollama";
-    console.log(`[Ollama Success] Response parsed successfully.`);
+    console.log(`[Ollama Success] Response parsed successfully for ${agentType}.`);
   } catch (ollamaErr: any) {
-    console.warn(`Ollama failed or timed out: ${ollamaErr.message}. Falling back to Hugging Face.`);
+    console.warn(`Ollama primary failed for ${agentType}: ${ollamaErr.message}. Falling back to Hugging Face.`);
 
-    // 3. Fallback to Hugging Face Qwen3.5-4B
+    // 2. Try Hugging Face as secondary fallback
     try {
       const apiKey = process.env.HF_API_KEY;
-      const modelId = process.env.HF_MODEL_ID || "Qwen/Qwen3.5-4B";
-      
-      console.log(`[HF Request] modelId: ${modelId}`);
       if (!apiKey || apiKey.includes("placeholder")) {
         throw new Error("Hugging Face API key is missing or is placeholder.");
       }
 
-      const hf = new HfInference(apiKey);
-      const completion = await hf.chatCompletion({
-        model: modelId,
-        messages: [
-          {
-            role: "system",
-            content: `You are an AI agent of type '${agentType}'. Respond ONLY with a valid JSON object. Do not include any explanations, markdown code fences, or text outside the JSON.`,
+      if (agentType === "talent_score") {
+        console.log(`[HF Request] agentType: talent_score, modelId: Qwen/Qwen3-32B`);
+        // Try with cerebras provider first
+        let res = await fetch("https://router.huggingface.co/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
           },
-          {
-            role: "user",
-            content: JSON.stringify(input),
-          },
-        ],
-        max_tokens: 1024,
-        temperature: 0.3,
-      });
+          body: JSON.stringify({
+            model: "Qwen/Qwen3-32B:cerebras",
+            messages: [
+              {
+                role: "system",
+                content: `You are an AI agent of type '${agentType}'. Respond ONLY with a valid JSON object.`
+              },
+              {
+                role: "user",
+                content: JSON.stringify(input)
+              }
+            ],
+            max_tokens: 1024,
+            temperature: 0.3,
+            extra_body: {
+              enable_thinking: false
+            }
+          })
+        });
 
-      const rawContent = completion.choices[0]?.message?.content ?? "";
-      responseObj = extractJSON(rawContent);
-      source = "huggingface";
-      console.log(`[HF Success] Response parsed successfully.`);
+        // Fallback to standard provider if cerebras is offline
+        if (!res.ok) {
+          console.warn(`HF Qwen/Qwen3-32B with Cerebras provider failed with status ${res.status}. Trying Qwen/Qwen3-32B without specific provider...`);
+          res = await fetch("https://router.huggingface.co/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: "Qwen/Qwen3-32B",
+              messages: [
+                {
+                  role: "system",
+                  content: `You are an AI agent of type '${agentType}'. Respond ONLY with a valid JSON object.`
+                },
+                {
+                  role: "user",
+                  content: JSON.stringify(input)
+                }
+              ],
+              max_tokens: 1024,
+              temperature: 0.3,
+              extra_body: {
+                enable_thinking: false
+              }
+            })
+          });
+        }
+
+        if (!res.ok) {
+          throw new Error(`HF Inference Router responded with status ${res.status}`);
+        }
+
+        const resData = await res.json();
+        const rawContent = resData.choices?.[0]?.message?.content ?? "";
+        responseObj = extractJSON(rawContent);
+        source = "huggingface";
+        console.log(`[HF Success] Response parsed successfully for talent_score.`);
+      } else {
+        const modelId = process.env.HF_MODEL_ID || "Qwen/Qwen3.5-4B";
+        console.log(`[HF Request] agentType: ${agentType}, modelId: ${modelId}`);
+
+        const hf = new HfInference(apiKey);
+        const completion = await hf.chatCompletion({
+          model: modelId,
+          messages: [
+            {
+              role: "system",
+              content: `You are an AI agent of type '${agentType}'. Respond ONLY with a valid JSON object. Do not include any explanations, markdown code fences, or text outside the JSON.`,
+            },
+            {
+              role: "user",
+              content: JSON.stringify(input),
+            },
+          ],
+          max_tokens: 1024,
+          temperature: 0.3,
+        });
+
+        const rawContent = completion.choices[0]?.message?.content ?? "";
+        responseObj = extractJSON(rawContent);
+        source = "huggingface";
+        console.log(`[HF Success] Response parsed successfully.`);
+      }
     } catch (hfErr: any) {
-      console.warn(`External LLM endpoints unreachable (${hfErr.message}). Applying local intelligence parser for ${agentType}.`);
-      
+      console.warn(`External LLM endpoints unreachable (${hfErr.message}) and Ollama failed (${ollamaErr.message}). Applying local intelligence parser for ${agentType}.`);
+
       if (agentType === "recruiter_copilot") {
         const queryStr = (input as any)?.query || JSON.stringify(input);
         const lower = queryStr.toLowerCase();
@@ -182,7 +909,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
         source = "local_explainer_parser";
       } else if (agentType === "resume_parser") {
         const promptStr = (input as any)?.prompt || JSON.stringify(input);
-        
+
         // Extract raw resume text from basePrompt
         const rawTextStart = promptStr.indexOf("RAW RESUME TEXT:");
         const resumeText = rawTextStart !== -1 ? promptStr.substring(rawTextStart + 16).trim() : promptStr;
@@ -206,12 +933,12 @@ export async function callAgent(agentType: string, input: object): Promise<objec
 
         // 4. Extract Skills
         const skillList = [
-          "React", "Next.js", "TypeScript", "JavaScript", "Node.js", "Express", 
-          "Python", "Django", "Flask", "FastAPI", "PostgreSQL", "MongoDB", "MySQL", 
-          "Firebase", "Supabase", "Docker", "Kubernetes", "AWS", "Google Cloud", 
-          "Azure", "Git", "GitHub", "HTML", "CSS", "Tailwind", "Bootstrap", 
-          "Redux", "GraphQL", "REST API", "Java", "Spring Boot", "C++", "C#", "Rust", 
-          "Go", "Golang", "PHP", "Laravel", "Ruby", "Ruby on Rails", "Machine Learning", 
+          "React", "Next.js", "TypeScript", "JavaScript", "Node.js", "Express",
+          "Python", "Django", "Flask", "FastAPI", "PostgreSQL", "MongoDB", "MySQL",
+          "Firebase", "Supabase", "Docker", "Kubernetes", "AWS", "Google Cloud",
+          "Azure", "Git", "GitHub", "HTML", "CSS", "Tailwind", "Bootstrap",
+          "Redux", "GraphQL", "REST API", "Java", "Spring Boot", "C++", "C#", "Rust",
+          "Go", "Golang", "PHP", "Laravel", "Ruby", "Ruby on Rails", "Machine Learning",
           "Deep Learning", "TensorFlow", "PyTorch", "Scikit-Learn", "Pandas", "NumPy"
         ];
         const extractedSkills: string[] = [];
@@ -268,7 +995,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
         const roles = ["Software Engineer", "Full Stack Engineer", "Backend Developer", "Frontend Developer", "Data Scientist", "Product Manager", "Software Developer", "DevOps Engineer"];
         let foundRole = null;
         let foundCompany = null;
-        
+
         for (const r of roles) {
           const reg = new RegExp(`\\b${r}\\b`, 'i');
           if (reg.test(resumeText)) {
@@ -283,7 +1010,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
           const suffixMatch = resumeText.match(/([A-Z][a-zA-Z0-9&\s]{2,20}(?:Inc\.|Corp\.|Ltd\.|Co\.|Group))/i);
           if (suffixMatch) foundCompany = suffixMatch[1].trim();
         }
-        
+
         if (foundRole || foundCompany) {
           experience.push({
             company: foundCompany || "Unknown Company",
@@ -324,14 +1051,14 @@ export async function callAgent(agentType: string, input: object): Promise<objec
       } else if (agentType === "interview_evaluator") {
         const answers = (input as any).answers || {};
         const answerTexts = Object.values(answers).map(v => String(v).trim());
-        
+
         let techScore = 40;
         let strengths = [];
         let concerns = [];
-        
+
         // Evaluate based on keyword presence strictly in the candidate's answers
         const answersStr = JSON.stringify(answers).toLowerCase();
-        
+
         // 1. TS check
         if (answersStr.includes("merging") || answersStr.includes("union") || answersStr.includes("intersection")) {
           techScore += 20;
@@ -339,7 +1066,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
         } else {
           concerns.push("Vague or missing explanation of TypeScript interface and type distinctions.");
         }
-        
+
         // 2. React check
         if (answersStr.includes("reconciliation") || answersStr.includes("diff") || answersStr.includes("virtual dom")) {
           techScore += 20;
@@ -347,7 +1074,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
         } else {
           concerns.push("Weak understanding of React rendering mechanics.");
         }
-        
+
         // 3. Node check
         if (answersStr.includes("event loop") || answersStr.includes("libuv") || answersStr.includes("thread pool")) {
           techScore += 20;
@@ -359,7 +1086,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
         // Substance analysis: Check word counts per answer
         let hasShortAnswer = false;
         let totalWords = 0;
-        
+
         for (const ans of answerTexts) {
           const words = ans.split(/\s+/).filter(w => w.length > 0);
           totalWords += words.length;
@@ -367,7 +1094,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
             hasShortAnswer = true;
           }
         }
-        
+
         // Capping rule: an answer under 15 words should never score above 40
         if (hasShortAnswer || totalWords < 50) {
           techScore = Math.min(techScore, 40);
@@ -378,13 +1105,13 @@ export async function callAgent(agentType: string, input: object): Promise<objec
             techScore = Math.min(100, techScore + 10);
           }
         }
-        
+
         let recommendation = 'maybe';
         if (techScore >= 80) recommendation = 'strong_yes';
         else if (techScore >= 65) recommendation = 'yes';
         else if (techScore >= 45) recommendation = 'maybe';
         else recommendation = 'no';
-        
+
         responseObj = {
           confidence_score: Math.min(100, Math.max(0, techScore + 5)),
           technical_rating: techScore,
@@ -392,9 +1119,8 @@ export async function callAgent(agentType: string, input: object): Promise<objec
           hiring_recommendation: recommendation,
           strengths: strengths.length > 0 ? strengths : ["Responsive communication style."],
           concerns: concerns.length > 0 ? concerns : ["No major concerns detected."],
-          summary: `Candidate has completed the interview. Technical rating is ${techScore}%. ${
-            hasShortAnswer ? "Evaluation capped at 40 due to insufficient substance in one or more answers." : "Demonstrated key technical strengths."
-          }`,
+          summary: `Candidate has completed the interview. Technical rating is ${techScore}%. ${hasShortAnswer ? "Evaluation capped at 40 due to insufficient substance in one or more answers." : "Demonstrated key technical strengths."
+            }`,
           evaluation_method: "local_fallback"
         };
         source = "local_interview_evaluator";
@@ -406,14 +1132,14 @@ export async function callAgent(agentType: string, input: object): Promise<objec
       } else if (agentType === "ppt_analyzer") {
         const slidesText = (input as any).slides_text || "";
         const lower = slidesText.toLowerCase();
-        
+
         let innovation = 50;
         let technical = 50;
         let presentation = 50;
         let business = 50;
-        
+
         const wordCount = slidesText.split(/\s+/).filter(Boolean).length;
-        
+
         if (lower.includes("architecture") || lower.includes("stack") || lower.includes("database") || lower.includes("api") || lower.includes("backend") || lower.includes("frontend")) {
           technical += 20;
         }
@@ -426,7 +1152,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
         if (lower.includes("conclusion") || lower.includes("summary") || lower.includes("timeline") || lower.includes("milestone")) {
           presentation += 20;
         }
-        
+
         if (wordCount < 100) {
           innovation = Math.max(10, innovation - 30);
           technical = Math.max(10, technical - 35);
@@ -435,19 +1161,19 @@ export async function callAgent(agentType: string, input: object): Promise<objec
         } else if (wordCount > 300) {
           presentation = Math.min(100, presentation + 15);
         }
-        
+
         const overall = Math.round((innovation + technical + presentation + business) / 4);
-        
+
         let suggestions = [
           "Provide more concrete technical details regarding the architecture and tech stack.",
           "Elaborate on the business model and target customer acquisition strategy.",
           "Refine the value proposition to highlight what makes the solution unique."
         ];
-        
+
         if (wordCount < 100) {
           suggestions.push("Expand the overall content of the deck; it currently lacks sufficient details to evaluate.");
         }
-        
+
         responseObj = {
           scores: {
             innovation: Math.min(100, innovation),
@@ -464,10 +1190,10 @@ export async function callAgent(agentType: string, input: object): Promise<objec
       } else if (agentType === "content_originality_analyzer") {
         const slidesText = JSON.stringify((input as any).slides_text || "").toLowerCase();
         const answersText = JSON.stringify((input as any).interview_qa || "").toLowerCase();
-        
+
         let score = 95;
         const flags = [];
-        
+
         // 1. Check for thin/placeholder pitch deck
         if (slidesText.includes("slide 1: smartrecruit project") || (slidesText.length > 0 && slidesText.split(/\s+/).length < 50)) {
           score -= 15;
@@ -477,7 +1203,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
             evidence: "Pitch deck matches generic boilerplate structure or has extremely low word count."
           });
         }
-        
+
         // 2. Check for weak answers
         if (answersText.includes("identical in typescript") || answersText.includes("re-renders if state or props change") || (answersText.length > 0 && answersText.split(/\s+/).length < 60)) {
           score -= 10;
@@ -487,11 +1213,11 @@ export async function callAgent(agentType: string, input: object): Promise<objec
             evidence: "Interview answers are unusually brief, lacking technical depth expected of the profile."
           });
         }
-        
+
         let risk = "low";
         if (score < 60) risk = "high";
         else if (score < 85) risk = "medium";
-        
+
         responseObj = {
           originality_score: score,
           risk_level: risk,
@@ -589,18 +1315,24 @@ export async function callAgent(agentType: string, input: object): Promise<objec
         const resume = talentProfile.resume || {};
         const github = talentProfile.github || {};
         const manual = talentProfile.manual || {};
-        
+        const targetCompany = (input as any).target_company || null;
+
         const candidateName = resume.name || talentProfile.name || "Candidate User";
         const email = resume.email || talentProfile.email || "candidate@hirespark.com";
         const phone = resume.phone || talentProfile.phone || "+1 (555) 019-2834";
         const location = resume.location || talentProfile.location || "San Francisco, CA";
-        
+
         const experience = Array.isArray(resume.experience) ? resume.experience : [];
         const education = Array.isArray(resume.education) ? resume.education : [];
         const projects = Array.isArray(resume.projects) ? resume.projects : [];
         const skills = Array.isArray(resume.skills) ? resume.skills : [];
         const certifications = Array.isArray(resume.certifications) ? resume.certifications : [];
-        
+
+        let summaryText = `Results-driven software professional specializing in ${skills.slice(0, 3).join(", ") || "software engineering"}. Proven track record of delivering high-quality web services and products.`;
+        if (targetCompany) {
+          summaryText += ` (Tailored for ${targetCompany.toUpperCase()})`;
+        }
+
         responseObj = {
           name: candidateName,
           contact: {
@@ -609,7 +1341,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
             location,
             github: talentProfile.github_username || null
           },
-          summary: `Results-driven software professional specializing in ${skills.slice(0, 3).join(", ") || "software engineering"}. Proven track record of delivering high-quality web services and products.`,
+          summary: summaryText,
           experience: experience.map((exp: any) => ({
             company: exp.company || "Company",
             role: exp.role || "Developer",
@@ -636,6 +1368,7 @@ export async function callAgent(agentType: string, input: object): Promise<objec
             issuer: c.issuer || "Authority",
             year: typeof c.year === "number" ? c.year : null
           })),
+          target_company: targetCompany,
           evaluation_method: "local_fallback"
         };
         source = "local_resume_builder";

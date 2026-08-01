@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { callAgent } from "./callAgent";
 import { getSupabaseAdmin } from "../db/client";
+import { generateCareerGuidance } from "../profile/career";
 
 // Zod schema representing the strict target format
 export const TalentScoreResponseSchema = z.object({
@@ -89,6 +90,7 @@ No commentary, no markdown code fences, no extra fields. Return ONLY valid JSON.
     const rawResponse = await callAgent("talent_score", {
       talent_profile: talentProfile,
       prompt: basePrompt,
+      timestamp: Date.now(),
     });
 
     const validation = TalentScoreResponseSchema.safeParse(rawResponse);
@@ -120,6 +122,7 @@ Return ONLY valid JSON matching the schema. No commentary.`;
         talent_profile: talentProfile,
         prompt: retryPrompt,
         validation_errors: errorList,
+        timestamp: Date.now(),
       });
 
       const retryValidation = TalentScoreResponseSchema.safeParse(rawRetryResponse);
@@ -157,5 +160,14 @@ Return ONLY valid JSON matching the schema. No commentary.`;
   }
 
   console.log(`[Talent Score Success] Saved talent_score to profile for user_id ${userId}`);
+
+  // Automatically trigger career roadmap generation / update
+  try {
+    console.log(`[Talent Score Success] Triggering fresh career roadmap generation for user_id ${userId}...`);
+    await generateCareerGuidance(userId, true);
+  } catch (err) {
+    console.error(`[Talent Score Warning] Failed to trigger career roadmap generation:`, err);
+  }
+
   return { success: true, data: finalData };
 }

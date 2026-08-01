@@ -324,3 +324,42 @@ export async function getCandidateHackathons() {
     return { success: false, error: err.message };
   }
 }
+
+export async function getGeneratedResumeAction(templateName: string, targetCompany: string | null) {
+  try {
+    const supabase = await createServerDbClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    let query = supabase
+      .from("resumes")
+      .select("*")
+      .eq("candidate_id", user.id)
+      .eq("template_name", templateName);
+
+    if (targetCompany === null) {
+      query = query.is("target_company", null);
+    } else {
+      query = query.eq("target_company", targetCompany);
+    }
+
+    const { data, error } = await query
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Failed to query generated resume:", error);
+      return { success: false, error: "Database error" };
+    }
+
+    return { success: true, resume: data };
+  } catch (err: any) {
+    console.error("Failed to get generated resume:", err);
+    return { success: false, error: err.message };
+  }
+}
+

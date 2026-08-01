@@ -795,7 +795,7 @@ export async function testResumeBuilderAction(candidateId: string, templateName:
     if (!candidateId) {
       throw new Error("Candidate ID is required.");
     }
-    const result = await buildCandidateResume(candidateId, templateName, true);
+    const result = await buildCandidateResume(candidateId, templateName, null, true);
     
     // Fetch cached rows from resumes table for this candidate
     const adminClient = getSupabaseAdmin();

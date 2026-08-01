@@ -205,13 +205,24 @@ export default function CandidateDashboard() {
                         <h2 className="text-lg font-bold">Talent Score Analytics</h2>
                       </div>
                       {overallScore !== null && (
-                        <div className="text-right">
-                          <div className="text-3xl font-extrabold text-[#D2042D] leading-none">
-                            {overallScore}
-                            <span className="text-lg text-[#A3A3A3] font-normal">/100</span>
-                          </div>
-                          <div className="text-[10px] font-bold text-[#ecc154] tracking-wider mt-1">
-                            {overallScore >= 90 ? "TOP 2% GLOBALLY" : overallScore >= 80 ? "TOP 10% GLOBALLY" : "VERIFIED COMPETENCY"}
+                        <div className="flex items-center gap-4 text-right">
+                          <button
+                            onClick={handleGenerateScore}
+                            disabled={isGeneratingScore}
+                            className="px-3 py-1.5 rounded-lg border border-[#353535] hover:bg-[#353535] text-[#A3A3A3] hover:text-[#F5F5F5] transition-colors disabled:opacity-50 flex items-center gap-1.5 text-xs font-semibold"
+                            title="Recalculate Talent Score"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingScore ? "animate-spin text-[#D2042D]" : ""}`} />
+                            <span>Recalculate</span>
+                          </button>
+                          <div>
+                            <div className="text-3xl font-extrabold text-[#D2042D] leading-none">
+                              {overallScore}
+                              <span className="text-lg text-[#A3A3A3] font-normal">/100</span>
+                            </div>
+                            <div className="text-[10px] font-bold text-[#ecc154] tracking-wider mt-1">
+                              {overallScore >= 90 ? "TOP 2% GLOBALLY" : overallScore >= 80 ? "TOP 10% GLOBALLY" : "VERIFIED COMPETENCY"}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -354,6 +365,47 @@ export default function CandidateDashboard() {
                             +{profileData.resumeData.skills.length - 10} more
                           </span>
                         )}
+                      </div>
+                    </div>
+                  )}
+                  {profileData.resumeData.projects && profileData.resumeData.projects.length > 0 && (
+                    <div className="space-y-1.5 border-t border-[#353535] pt-3">
+                      <p className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-wider">Extracted Projects</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {profileData.resumeData.projects.slice(0, 4).map((proj: any, idx: number) => (
+                          <div key={idx} className="bg-[#1e1e1e] p-2.5 rounded border border-[#353535] text-[11px] flex flex-col justify-between">
+                            <div>
+                              <p className="font-bold text-[#F5F5F5]">{proj.name}</p>
+                              <p className="text-[#A3A3A3] mt-0.5 line-clamp-2 leading-relaxed">{proj.description}</p>
+                            </div>
+                            {proj.technologies && proj.technologies.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {proj.technologies.map((tech: string) => (
+                                  <span key={tech} className="text-[9px] px-1 bg-[#262626] text-[#A3A3A3] rounded">
+                                    {tech}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {profileData.resumeData.certifications && profileData.resumeData.certifications.length > 0 && (
+                    <div className="space-y-1.5 border-t border-[#353535] pt-3">
+                      <p className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-wider">Extracted Certifications</p>
+                      <div className="flex flex-wrap gap-2">
+                        {profileData.resumeData.certifications.map((cert: any, idx: number) => (
+                          <div key={idx} className="bg-[#1e1e1e] px-2.5 py-1.5 rounded border border-[#353535] text-[10px] flex justify-between items-center gap-4">
+                            <div>
+                              <span className="font-bold text-[#F5F5F5]">{cert.name}</span>
+                              <span className="text-[#A3A3A3] ml-1.5">({cert.issuer})</span>
+                            </div>
+                            {cert.year && <span className="font-mono text-[#D2042D] font-bold">{cert.year}</span>}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
