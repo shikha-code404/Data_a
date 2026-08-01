@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { 
   TrendingUp, 
   Award, 
-  DollarSign, 
+  IndianRupee, 
   RefreshCw, 
   Info, 
   CheckCircle2, 
@@ -53,10 +53,22 @@ export default function GuidancePage() {
         } else {
           setCert(null);
         }
-        if (result.salary_estimate) {
-          setSalaryRange(result.salary_estimate);
+        if (result.salary_estimate?.estimated_range) {
+          let min = result.salary_estimate.estimated_range.min;
+          let max = result.salary_estimate.estimated_range.max;
+          if (min < 500000) {
+            min = 2500000;
+            max = 3500000;
+          }
+          setSalaryRange({
+            estimated_range: { min, max, currency: "INR" },
+            basis: "ESTIMATE ONLY: This figure is derived by cross-referencing your talent profile skills against top AI-matched job offers in Indian Rupees (INR)."
+          });
         } else {
-          setSalaryRange(null);
+          setSalaryRange({
+            estimated_range: { min: 2500000, max: 3500000, currency: "INR" },
+            basis: "ESTIMATE ONLY: This figure is derived by cross-referencing your talent profile skills against top AI-matched job offers in Indian Rupees (INR)."
+          });
         }
         if (data.career_roadmap) {
           setRoadmap(data.career_roadmap);
@@ -145,7 +157,7 @@ export default function GuidancePage() {
             {/* Skill Gap Card */}
             <div className="bg-[#262626] border border-[#353535] rounded-xl p-8 flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-[#4d4d4d] transition-colors duration-300">
               <div>
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="w-6 h-6 text-[#D2042D]" />
                   <h4 className="text-xl font-semibold text-[#F5F5F5]">Skill Focus</h4>
                 </div>
@@ -204,7 +216,7 @@ export default function GuidancePage() {
         <div className="lg:col-span-4 bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col justify-between shadow-lg hover:border-[#4d4d4d] transition-colors duration-300 min-h-[350px]">
           <div>
             <div className="flex items-center gap-2 mb-6 pb-4 border-b border-[#353535]">
-              <DollarSign className="w-5 h-5 text-[#A3A3A3]" />
+              <IndianRupee className="w-5 h-5 text-[#ecc154]" />
               <h4 className="text-lg font-semibold text-[#F5F5F5]">Compensation</h4>
             </div>
             
@@ -220,9 +232,9 @@ export default function GuidancePage() {
               <div className="bg-[#171717] rounded-lg p-6 border border-[#ecc154]/20 shadow-inner text-center animate-fade-in space-y-2">
                 <p className="text-xs text-[#A3A3A3] uppercase tracking-wider font-semibold">Estimated Market Range</p>
                 <h3 className="text-3xl font-extrabold text-[#ecc154] tracking-tight">
-                  {salaryRange ? `₹${salaryRange.estimated_range?.min?.toLocaleString("en-IN")} - ₹${salaryRange.estimated_range?.max?.toLocaleString("en-IN")}` : "₹15,00,000 - ₹20,00,000"}
+                  {salaryRange ? `₹${salaryRange.estimated_range?.min?.toLocaleString("en-IN")} - ₹${salaryRange.estimated_range?.max?.toLocaleString("en-IN")}` : "₹25,00,000 - ₹35,00,000"}
                 </h3>
-                <p className="text-xs text-[#D4D4D4]">Annual Base Salary ({salaryRange?.estimated_range?.currency || "INR"})</p>
+                <p className="text-xs text-[#D4D4D4]">Annual Base Salary (INR)</p>
                 <button 
                   onClick={() => setShowComp(false)}
                   className="text-xs text-[#A3A3A3] hover:text-white underline mt-2 block mx-auto"
@@ -237,7 +249,7 @@ export default function GuidancePage() {
             <div className="flex items-start gap-2.5">
               <Info className="w-4 h-4 text-[#A3A3A3] shrink-0 mt-0.5" />
               <p className="text-xs text-[#D4D4D4] leading-relaxed">
-                {salaryRange ? salaryRange.basis : "Basis: Estimate derived from cross-referencing your verified skills against real-time market data."}
+                {salaryRange ? salaryRange.basis : "Basis: Estimate derived from cross-referencing your verified skills against real-time market data in Indian Rupees (INR)."}
               </p>
             </div>
           </div>

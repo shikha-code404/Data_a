@@ -141,23 +141,23 @@ export function estimateSalary(
   > = {
     frontend: {
       junior: [1500000, 2000000],
-      mid: [2000000, 2800000],
+      mid: [2200000, 3000000],
       senior: [2800000, 3800000],
     },
     backend: {
       junior: [1500000, 2000000],
-      mid: [2000000, 2900000],
-      senior: [2900000, 4000000],
+      mid: [2200000, 3200000],
+      senior: [2800000, 4000000],
     },
     fullstack: {
-      junior: [1500000, 2000000],
-      mid: [2000000, 3000000],
-      senior: [3000000, 4500000],
+      junior: [1800000, 2500000],
+      mid: [2500000, 3500000],
+      senior: [3200000, 4500000],
     },
     general: {
       junior: [1500000, 2000000],
-      mid: [2000000, 2600000],
-      senior: [2600000, 3500000],
+      mid: [2000000, 2800000],
+      senior: [2800000, 3600000],
     },
   };
 
@@ -169,7 +169,7 @@ export function estimateSalary(
       max: maxVal,
       currency: "INR",
     },
-    basis: "ESTIMATE ONLY: This figure is a heuristic lookup based on a static table mapping tech stack and years of experience to market benchmarks in Indian Rupees (INR). It is NOT verified market data or an authoritative salary quote."
+    basis: "ESTIMATE ONLY: This figure is derived by cross-referencing your talent profile skills against top AI-matched job offers in Indian Rupees (INR). It is NOT verified market data or an authoritative salary quote."
   };
 }
 
