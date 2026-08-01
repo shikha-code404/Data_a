@@ -229,23 +229,32 @@ export async function analyzePitchDeck(
     team_context: teamContext,
     prompt_instructions: `
       You are a professional pitch deck evaluator. Analyze the slide-by-slide text of the pitch deck along with the team context.
-      You must return ONLY a valid JSON object matching this schema:
+      
+      Respond with ONLY a valid JSON object — no markdown code fences, no explanations outside the JSON.
+
+      Here is an EXAMPLE of the correct JSON shape, filled with SAMPLE data for a DIFFERENT pitch deck — this shows you the structure only. Do NOT copy or reuse these exact numbers or text:
+
       {
         "scores": {
-          "innovation": number (0-100),
-          "technical_feasibility": number (0-100),
-          "presentation_quality": number (0-100),
-          "business_potential": number (0-100),
-          "overall_pitch_score": number (0-100)
+          "innovation": 75,
+          "technical_feasibility": 80,
+          "presentation_quality": 85,
+          "business_potential": 70,
+          "overall_pitch_score": 78
         },
-        "summary": string (max 4 sentences),
-        "improvement_suggestions": string[] (3-5 concrete, specific items)
+        "summary": "The pitch deck outlines a compelling problem-solution fit with clear architectural breakdown. Market analysis is initial but sound.",
+        "improvement_suggestions": [
+          "Detail customer acquisition channels and unit economics.",
+          "Provide concrete benchmark data for platform performance under load.",
+          "Expand team role coverage for go-to-market operations."
+        ]
       }
-      
+
       Strict Rules:
-      1. Score ONLY from content actually present in the deck.
-      2. Do NOT assume unstated technical depth.
-      3. Do NOT inflate scores for polished formatting or slide design alone.
+      1. Score ONLY from content actually present in the deck provided.
+      2. Do NOT copy or reuse any values from the example above.
+      3. Do NOT assume unstated technical depth.
+      4. Do NOT inflate scores for polished formatting or slide design alone.
     `,
   };
 

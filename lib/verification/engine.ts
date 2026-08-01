@@ -174,7 +174,8 @@ async function gradeFreeResponse(
       candidate_answer: candidateAnswer.trim(),
       instructions:
         "Grade strictly for technical accuracy. Do NOT reward answer length or confidence. " +
-        "Return ONLY valid JSON: { \"score\": <0-100>, \"correct\": <true|false>, \"feedback\": \"<max 2 sentences>\" }",
+        "Respond with ONLY a valid JSON object matching this sample structure (do NOT copy sample values): " +
+        "{ \"score\": 85, \"correct\": true, \"feedback\": \"Accurate explanation of core concept and edge cases.\" }",
     })) as Partial<FreeResponseGraderOutput>;
 
     const score = typeof agentResponse.score === "number"

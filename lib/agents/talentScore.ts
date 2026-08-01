@@ -55,31 +55,32 @@ export async function calculateCandidateTalentScore(
 
   const talentProfile = profile.talent_profile;
 
-  const basePrompt = `You are a professional technical recruiter and engineering evaluator. Rate the developer's talent profile based STRICTLY on evidence in the provided JSON data.
+  const basePrompt = `You are a professional technical recruiter and engineering evaluator. Rate the developer's talent profile based STRICTLY on evidence in the provided JSON data. You must NEVER output literal words like "number" or "string" as content.
 
-TALENT PROFILE DATA:
-${JSON.stringify(talentProfile, null, 2)}
+Respond with ONLY a valid JSON object — no commentary, no markdown code fences, no extra fields.
 
-INSTRUCTIONS:
-1. Base every sub-score only on evidence present in the provided talent_profile (specific repos, languages, commit volume, resume experience/projects). Do not invent achievements not present in the input.
-2. If a category has no supporting evidence, score it conservatively (below 40) rather than guessing high.
-3. Return ONLY a valid JSON object matching this exact schema:
+Here is an EXAMPLE of the correct JSON shape, filled with SAMPLE data for a DIFFERENT candidate — this shows you the structure only. Do NOT copy or reuse these numbers or reasoning text:
 
 {
   "scores": {
-    "coding_ability": number (0-100),
-    "project_quality": number (0-100),
-    "leadership": number (0-100),
-    "problem_solving": number (0-100),
-    "innovation": number (0-100),
-    "community_participation": number (0-100),
-    "technical_consistency": number (0-100)
+    "coding_ability": 82,
+    "project_quality": 78,
+    "leadership": 65,
+    "problem_solving": 80,
+    "innovation": 72,
+    "community_participation": 60,
+    "technical_consistency": 85
   },
-  "overall_score": number (0-100),
-  "reasoning": string (max 3 sentences, plain text, no markdown)
+  "overall_score": 75,
+  "reasoning": "Strong coding consistency and verified project repositories demonstrate solid engineering fundamentals. Community contributions are emerging."
 }
 
-No commentary, no markdown code fences, no extra fields. Return ONLY valid JSON.`;
+TALENT PROFILE DATA FOR ACTUAL CANDIDATE:
+${JSON.stringify(talentProfile, null, 2)}
+
+INSTRUCTIONS:
+1. Base every sub-score only on evidence present in the provided talent_profile for THIS candidate (specific repos, languages, commit volume, resume experience/projects). Do not copy from the example above.
+2. If a category has no supporting evidence, score it conservatively (below 40) rather than guessing high.`;
 
   let finalData: (TalentScoreResponse & { needs_review?: boolean }) | null = null;
   let needsReview = false;

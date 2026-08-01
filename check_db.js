@@ -15,24 +15,24 @@ if (fs.existsSync(envPath)) {
 async function checkDb() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  console.log("URL:", supabaseUrl);
-  
   const admin = createClient(supabaseUrl, supabaseKey);
-  const userId = "9b8acd01-31ef-4b5e-b8ad-b96dae38dc54";
-  console.log("Checking database for user:", userId);
-  try {
-    const { data, error } = await admin
-      .from("candidate_profiles")
-      .select("career_roadmap, talent_score, talent_profile")
-      .eq("user_id", userId)
-      .single();
 
-    if (error) throw error;
-    console.log("talent_score:", JSON.stringify(data.talent_score, null, 2));
-    console.log("career_roadmap:", JSON.stringify(data.career_roadmap, null, 2));
-  } catch (err) {
-    console.error("Database error:", err.message);
+  const { data, error } = await admin
+    .from("candidate_profiles")
+    .select("user_id, github_username, talent_profile, resume_data");
+
+  if (error) {
+    console.error("Error:", error);
+    return;
   }
+
+  console.log("Found", data.length, "candidate profiles.");
+  data.forEach((p, idx) => {
+    console.log(`\n--- Candidate Profile ${idx + 1} (${p.user_id}) ---`);
+    console.log("GitHub Username:", p.github_username);
+    console.log("resume_data:", JSON.stringify(p.resume_data, null, 2));
+    console.log("talent_profile:", JSON.stringify(p.talent_profile, null, 2));
+  });
 }
 
 checkDb();

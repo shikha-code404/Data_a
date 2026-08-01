@@ -318,33 +318,47 @@ export async function generateCareerGuidance(
   const verificationsList = verifications || [];
 
   // 4. Formulate Model prompt and execute agent
-  const basePrompt = `You are a Career Guidance AI. Analyze the candidate's talent profile, score, and verified skills to determine skill gaps, recommend certifications, and build a career roadmap.
-  
-INPUT DETAILS:
+  const basePrompt = `You are a Career Guidance AI. Analyze the candidate's talent profile, score, and verified skills to determine skill gaps, recommend certifications, and build a career roadmap. You must NEVER output placeholder text or generic filler.
+
+Respond with ONLY a valid JSON object — no code fences, explanations, or text outside the JSON object.
+
+Here is an EXAMPLE of the correct JSON shape, filled with SAMPLE data for a DIFFERENT, unrelated candidate — this shows you the structure only. Do NOT reuse, copy, or reference any of the values in this example:
+
+{
+  "skill_gaps": [
+    {
+      "skill": "Distributed Systems Architecture",
+      "current_level": "Intermediate",
+      "target_level": "Advanced",
+      "why": "Candidate has solid backend experience but lacks production multi-region architectural experience."
+    }
+  ],
+  "recommended_certifications": [
+    {
+      "name": "AWS Certified Solutions Architect - Associate",
+      "provider": "Amazon Web Services",
+      "reason": "Provides structured validation for designing scalable cloud systems."
+    }
+  ],
+  "career_roadmap": [
+    {
+      "stage": "Cloud & System Design Mastery",
+      "timeframe": "1-3 months",
+      "milestones": ["Complete AWS architecture course", "Build and deploy containerized microservice"]
+    }
+  ],
+  "reasoning": "Candidate demonstrates strong core software engineering skills and can progress to senior roles by mastering cloud system design."
+}
+
+INPUT DETAILS FOR ACTUAL CANDIDATE:
 - Profile: ${JSON.stringify(talentProfile)}
 - Overall Talent Score: ${JSON.stringify(talentScore)}
 - Verified Badges/Scores: ${JSON.stringify(verificationsList)}
 
 EVIDENCE RULES:
 - Base every single recommendation on concrete evidence actually present in the candidate's profile, stack, or scores.
-- Recommendations must be specific to this candidate's real stack and gaps, not generic filler. E.g. only recommend a certification if it connects directly as a logical next step to skills they already claim or need.
-- Keep the roadmap milestones actionable and realistic.
-
-You MUST respond with ONLY a valid JSON object matching the following structure:
-{
-  "skill_gaps": [
-    { "skill": "skill name", "current_level": "current level", "target_level": "target level", "why": "evidence-based reason" }
-  ],
-  "recommended_certifications": [
-    { "name": "certification name", "provider": "provider name", "reason": "why this matches their career path" }
-  ],
-  "career_roadmap": [
-    { "stage": "stage name", "timeframe": "timeframe e.g. 1-3 months", "milestones": ["milestone 1", "milestone 2"] }
-  ],
-  "reasoning": "brief 1-3 sentence summary explaining recommendations"
-}
-
-Do not include any code fences, explanations, markdown formatting, or text outside the JSON object.`;
+- Recommendations must be specific to this candidate's real stack and gaps — never fabricated, never copied from the example above.
+- Keep the roadmap milestones actionable and realistic.`;
 
   let finalRoadmap: CareerGuidance | null = null;
   let needsReview = false;

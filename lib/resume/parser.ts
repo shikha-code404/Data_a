@@ -197,20 +197,47 @@ export async function parseResumeAndSave(
 ): Promise<{ success: boolean; data: ResumeData; needsReview: boolean; error?: string }> {
   const adminClient = getSupabaseAdmin();
   
-  const basePrompt = `You are a professional resume parser. Parse the following raw text from a candidate's resume PDF and return a valid JSON object matching this exact schema:
+  const basePrompt = `You are a professional resume parser. You will receive raw text extracted from a candidate's resume PDF. Your job is to extract and transform THAT candidate's REAL data into a structured JSON object. You must NEVER output literal words like "string", "number", or "null" as content, nor generic placeholders.
+
+Respond with ONLY a valid JSON object — no commentary, no markdown code fences.
+
+Here is an EXAMPLE of the correct JSON shape, filled with SAMPLE data for a DIFFERENT candidate — this shows you the structure only. Do NOT reuse or copy any names, email addresses, or values from this example:
 
 {
-  "name": string,
-  "email": string | null,
-  "phone": string | null,
-  "education": [ { "institution": string, "degree": string, "field": string, "start_year": number | null, "end_year": number | null, "gpa": string | null } ],
-  "experience": [ { "company": string, "role": string, "start_date": string, "end_date": string | null, "description": string } ],
-  "projects": [ { "name": string, "description": string, "technologies": string[] } ],
-  "certifications": [ { "name": string, "issuer": string, "year": number | null } ],
-  "skills": string[]
+  "name": "Morgan Lee",
+  "email": "morgan.lee@example.com",
+  "phone": "+1 (555) 234-5678",
+  "education": [
+    {
+      "institution": "University of Washington",
+      "degree": "Bachelor of Science",
+      "field": "Computer Science",
+      "start_year": 2017,
+      "end_year": 2021,
+      "gpa": "3.8"
+    }
+  ],
+  "experience": [
+    {
+      "company": "Apex Software Solutions",
+      "role": "Software Engineer",
+      "start_date": "2021",
+      "end_date": "Present",
+      "description": "Developed backend APIs using Node.js and TypeScript."
+    }
+  ],
+  "projects": [
+    {
+      "name": "DataPipeline",
+      "description": "ETL pipeline for processing sensor telemetry data.",
+      "technologies": ["Python", "PostgreSQL", "Docker"]
+    }
+  ],
+  "certifications": [],
+  "skills": ["TypeScript", "Node.js", "Python", "Docker"]
 }
 
-Return ONLY valid JSON matching this exact schema. No commentary, no markdown code fences, no extra fields. If a field is not found in the resume, use null or an empty array — never fabricate data.
+Now, parse the ACTUAL resume text below into the structure shown above. Use only details present in the provided text — if a section is absent, return an empty array or null (e.g. no phone -> null, no certifications -> []). Never copy details from the sample above.
 
 RAW RESUME TEXT:
 ${rawText}`;
@@ -275,13 +302,42 @@ ${rawText}`;
   }
 
   // 4. Save to candidate_profiles in DB
+  let updatedTalentProfile: any = null;
+  try {
+    const { data: existingProf } = await adminClient
+      .from("candidate_profiles")
+      .select("talent_profile")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existingProf) {
+      updatedTalentProfile = existingProf.talent_profile || {};
+      updatedTalentProfile.resume = {
+        ...(updatedTalentProfile.resume || {}),
+        ...finalData,
+        skills: Array.from(new Set([
+          ...(Array.isArray(finalData.skills) ? finalData.skills : []),
+          ...(Array.isArray(updatedTalentProfile.resume?.skills) ? updatedTalentProfile.resume.skills : [])
+        ]))
+      };
+    }
+  } catch (e) {
+    // Ignore fetch error
+  }
+
+  const updatePayload: any = {
+    resume_data: finalData,
+    resume_needs_review: needsReview,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (updatedTalentProfile) {
+    updatePayload.talent_profile = updatedTalentProfile;
+  }
+
   const { error: dbError } = await adminClient
     .from("candidate_profiles")
-    .update({
-      resume_data: finalData,
-      resume_needs_review: needsReview,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("user_id", userId);
 
   if (dbError) {

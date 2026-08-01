@@ -123,7 +123,7 @@ export async function buildCandidateResume(
   try {
     const { data, error: profileErr } = await adminClient
       .from("candidate_profiles")
-      .select("user_id, talent_profile, github_username")
+      .select("user_id, talent_profile, github_username, resume_data")
       .eq("user_id", candidateId)
       .maybeSingle();
     if (!profileErr && data) {
@@ -173,35 +173,120 @@ export async function buildCandidateResume(
 
   const talentProfile = profile.talent_profile || {};
   talentProfile.github_username = profile.github_username;
+  if (profile.resume_data) {
+    talentProfile.resume_data = profile.resume_data;
+  }
+
+  const resumeData = profile.resume_data || {};
+  const existingResume = talentProfile.resume || {};
+  const isMockResume = existingResume.name === "Candidate User" || existingResume.company === "HireSpark Partner" || existingResume.institution === "Institute of Technology";
+
+  const isMockProject = (p: any) => p?.name === "AI Vector Matcher";
+  const isMockExp = (e: any) => e?.company === "HireSpark Partner";
+  const isMockCert = (c: any) => c?.name === "AWS Certified Solutions Architect" && !resumeData.certifications?.length;
+
+  const realProjects = (Array.isArray(resumeData.projects) ? resumeData.projects : []).filter((p: any) => !isMockProject(p));
+  const existingProjects = (!isMockResume && Array.isArray(existingResume.projects) ? existingResume.projects : []).filter((p: any) => !isMockProject(p));
+
+  let finalProjects = realProjects.length > 0 ? realProjects : existingProjects;
+  if (finalProjects.length === 0 && Array.isArray(talentProfile.github?.repositories) && talentProfile.github.repositories.length > 0) {
+    finalProjects = talentProfile.github.repositories.slice(0, 4).map((repo: any) => ({
+      name: repo.name || "Software Project",
+      description: repo.description || `Open-source project built with ${repo.primary_language || "TypeScript"}.`,
+      technologies: repo.primary_language ? [repo.primary_language] : (resumeData.skills || []).slice(0, 3)
+    }));
+  }
+
+  const realExp = (Array.isArray(resumeData.experience) ? resumeData.experience : []).filter((e: any) => !isMockExp(e));
+  const existingExp = (!isMockResume && Array.isArray(existingResume.experience) ? existingResume.experience : []).filter((e: any) => !isMockExp(e));
+
+  let finalExp = realExp.length > 0 ? realExp : existingExp;
+  if (finalExp.length === 0 && Array.isArray(talentProfile.github?.repositories) && talentProfile.github.repositories.length > 0) {
+    finalExp = [
+      {
+        company: "Independent Software Developer",
+        role: "Full Stack Developer",
+        start_date: "2022",
+        end_date: "Present",
+        description: `Developed and deployed ${talentProfile.github.repositories.length}+ software repositories specializing in ${(resumeData.skills || []).slice(0, 3).join(", ") || "full-stack development"}.`
+      }
+    ];
+  }
+
+  const realCerts = (Array.isArray(resumeData.certifications) ? resumeData.certifications : []).filter((c: any) => !isMockCert(c));
+  const existingCerts = (!isMockResume && Array.isArray(existingResume.certifications) ? existingResume.certifications : []).filter((c: any) => !isMockCert(c));
+
+  talentProfile.resume = {
+    name: (resumeData.name && resumeData.name !== "Candidate User" ? resumeData.name : null) || (!isMockResume ? existingResume.name : null) || profile.name || talentProfile.name || "",
+    email: (resumeData.email && !resumeData.email.includes("hirespark.com") ? resumeData.email : null) || (!isMockResume ? existingResume.email : null) || profile.email || talentProfile.email || "",
+    phone: resumeData.phone || (!isMockResume ? existingResume.phone : null) || profile.phone || talentProfile.phone || "",
+    location: resumeData.location || (!isMockResume ? existingResume.location : null) || profile.location || talentProfile.location || "",
+    summary: resumeData.summary || (!isMockResume ? existingResume.summary : null) || "",
+    skills: Array.from(new Set([
+      ...(Array.isArray(resumeData.skills) ? resumeData.skills : []),
+      ...(!isMockResume && Array.isArray(existingResume.skills) ? existingResume.skills : [])
+    ])),
+    education: Array.isArray(resumeData.education) && resumeData.education.length > 0
+      ? resumeData.education
+      : (!isMockResume && Array.isArray(existingResume.education) ? existingResume.education : []),
+    experience: finalExp,
+    projects: finalProjects,
+    certifications: realCerts.length > 0 ? realCerts : existingCerts
+  };
 
   // 3. Prompt formulation
-  const basePrompt = `You are a Professional Resume Tailor. Analyze the candidate's talent profile and rewrite/rephrase it into an ATS-friendly, impactful, structured resume JSON object.
-  
-INPUT DETAILS:
+  const basePrompt = `You are a Professional Resume Tailor. Analyze the candidate's talent profile and rewrite/rephrase it into an ATS-friendly, impactful, structured resume JSON object. You must NEVER output placeholder text or abstract type tokens.
+
+Respond with ONLY a valid JSON object — no markdown code fences, no extra top-level keys.
+
+Here is an EXAMPLE of the correct JSON shape, filled with SAMPLE data for a DIFFERENT candidate — this shows you the structure only. Do NOT copy or reference any names, companies, or values from this example:
+
+{
+  "name": "Jordan Ellis",
+  "contact": {
+    "email": "jordan.ellis@example.com",
+    "phone": "+1 (555) 402-8871",
+    "location": "Austin, TX",
+    "github": "jordanellis-dev"
+  },
+  "summary": "Backend-focused software engineer with 4 years of experience building distributed systems in Python and Go.",
+  "experience": [
+    {
+      "company": "Northwind Systems",
+      "role": "Backend Engineer",
+      "start_date": "2021",
+      "end_date": "Present",
+      "description": "Built microservices handling 2M+ daily requests, reducing p99 latency by 30%."
+    }
+  ],
+  "education": [
+    {
+      "institution": "University of Texas at Austin",
+      "degree": "Bachelor of Science",
+      "field": "Computer Science",
+      "start_year": 2016,
+      "end_year": 2020,
+      "gpa": "3.7"
+    }
+  ],
+  "projects": [
+    {
+      "name": "OpenQueue",
+      "description": "Open-source distributed task queue with at-least-once delivery guarantees.",
+      "technologies": ["Go", "Redis", "gRPC"]
+    }
+  ],
+  "skills": ["Python", "Go", "PostgreSQL"],
+  "certifications": []
+}
+
+INPUT DETAILS FOR ACTUAL CANDIDATE:
 ${JSON.stringify(talentProfile)}
 
 STRICT RULES:
-- Rephrase and tailor the wording for clarity and impact, but NEVER fabricate experience, companies, projects, dates, or skills that are not explicitly present in the input.
-- Keep the output consistent with the candidate's actual history.
-- Respond with ONLY a valid JSON object matching the exact schema:
-
-{
-  "name": string,
-  "contact": {
-    "email": string | null,
-    "phone": string | null,
-    "location": string | null,
-    "github": string | null
-  },
-  "summary": string (impactful ATS executive summary),
-  "experience": [ { "company": string, "role": string, "start_date": string, "end_date": string | null, "description": string } ],
-  "education": [ { "institution": string, "degree": string, "field": string, "start_year": number | null, "end_year": number | null, "gpa": string | null } ],
-  "projects": [ { "name": string, "description": string, "technologies": string[] } ],
-  "skills": string[],
-  "certifications": [ { "name": string, "issuer": string, "year": number | null } ]
-}
-
-Do not include any code fences, markdown blocks, extra keys, or explanations.`;
+- Use only the actual candidate's data provided above.
+- Rephrase and tailor for clarity and impact, but NEVER fabricate experience or copy from the sample above.
+- Omit no key. Rename no key. Empty sections should be empty arrays.`;
 
   let finalResume: StructuredResume | null = null;
   let needsReview = false;
