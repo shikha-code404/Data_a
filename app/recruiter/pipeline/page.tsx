@@ -54,7 +54,6 @@ export default function RecruiterPipelinePage() {
           job_id,
           match_percentage,
           candidate:candidate_profiles (
-            id,
             user_id,
             github_username,
             talent_score,
@@ -114,7 +113,7 @@ export default function RecruiterPipelinePage() {
         const candidateProfile = r.candidate;
         if (!candidateProfile) return;
 
-        const candidateId = candidateProfile.id;
+        const candidateId = candidateProfile.user_id;
         const jobId = r.job_id;
         const activeStage = stageLookup[`${candidateId}-${jobId}`] || "sourced";
         const stageObj = baseStages.find(s => s.id === activeStage);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Calendar,
   Sparkles,
@@ -19,99 +19,72 @@ import {
   Brain
 } from "lucide-react";
 
-interface ScheduledInterview {
-  name: string;
-  avatar: string;
-  role: string;
-  date: string;
-  time: string;
-  link: string;
-  status: "Confirmed" | "Completed" | "Pending";
-}
-
-const mockInterviews: ScheduledInterview[] = [
-  {
-    name: "Sarah Jenkins",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
-    role: "Product Designer (L5)",
-    date: "Today, July 31",
-    time: "14:00",
-    link: "https://zoom.us/test",
-    status: "Confirmed"
-  },
-  {
-    name: "Elena Rostova",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-    role: "Senior Full Stack Engineer",
-    date: "Yesterday, July 30",
-    time: "10:30",
-    link: "https://zoom.us/completed",
-    status: "Completed"
-  },
-  {
-    name: "Marcus Chen",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-    role: "VP of Engineering",
-    date: "Aug 2, 2026",
-    time: "11:00",
-    link: "https://zoom.us/pending",
-    status: "Pending"
-  }
-];
-
-interface TranscriptEntry {
-  question: string;
-  answer: string;
-  rating: "Strong" | "Good" | "Weak";
-}
-
 interface InterviewReport {
+  id: string;
   candidateId: string;
   name: string;
-  avatar: string;
+  avatar: string | null;
   role: string;
   communicationScore: number;
   technicalScore: number;
   overallScore: number;
+  recommendation: string;
   summary: string;
-  transcript: TranscriptEntry[];
+  strengths: string[];
+  concerns: string[];
+  questions: any;
+  answers: any;
+  needsReview: boolean;
+  createdAt: string;
 }
-
-const mockReports: InterviewReport[] = [
-  {
-    candidateId: "cand-report-1",
-    name: "Elena Rostova",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-    role: "Senior Full Stack Engineer",
-    communicationScore: 91,
-    technicalScore: 94,
-    overallScore: 93,
-    summary: "Exceptional clarity in system design explanations. Demonstrated deep knowledge of Next.js RSC architecture and Supabase RLS. Articulates trade-offs confidently under pressure. Strongly recommend advancing to final round.",
-    transcript: [
-      {
-        question: "Explain how you'd architect a multi-tenant SaaS system with row-level security.",
-        answer: "I'd use Postgres RLS policies tied to a JWT claim, scoping every query to the authenticated tenant's org_id. Each service uses a connection pool with per-request SET LOCAL to inject the claim safely.",
-        rating: "Strong"
-      },
-      {
-        question: "How would you optimise a Next.js page with 10,000 dynamic rows?",
-        answer: "Incremental Static Regeneration with on-demand revalidation for stable rows, combined with React Virtuoso for the scrollable list. Pair this with edge caching at the CDN layer for the static shell.",
-        rating: "Strong"
-      },
-      {
-        question: "Describe a time you handled production incident pressure.",
-        answer: "During a Redis cache stampede we had a 200ms latency spike. I implemented probabilistic early expiration using a 1% random early refresh pattern which resolved the thundering herd within 15 minutes.",
-        rating: "Good"
-      }
-    ]
-  }
-];
 
 type TabType = "scheduled" | "reports";
 
 export default function RecruiterInterviewsPage() {
-  const [activeTab, setActiveTab] = useState<TabType>("scheduled");
+  const [activeTab, setActiveTab] = useState<TabType>("reports");
   const [selectedReport, setSelectedReport] = useState<InterviewReport | null>(null);
+  const [reports, setReports] = useState<InterviewReport[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const fetchReports = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/interview/reports");
+      const data = await res.json();
+      if (data.success && data.reports) {
+        setReports(data.reports);
+      }
+    } catch (err) {
+      console.error("Failed to load interview reports:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const completedCount = reports.length;
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  // Build Q&A transcript from questions + answers
+  const buildTranscript = (report: InterviewReport) => {
+    const allQuestions = [
+      ...(report.questions?.technical_questions || []),
+      ...(report.questions?.behavioral_questions || [])
+    ];
+    return allQuestions.map((q: string, i: number) => ({
+      question: q,
+      answer: report.answers?.[q] || report.answers?.[`q${i}`] || "No answer recorded.",
+      rating: i < (report.questions?.technical_questions?.length || 0) 
+        ? (report.technicalScore >= 80 ? "Strong" : report.technicalScore >= 60 ? "Good" : "Weak")
+        : (report.communicationScore >= 80 ? "Strong" : report.communicationScore >= 60 ? "Good" : "Weak")
+    }));
+  };
 
   return (
     <div className="space-y-6 bg-[#131313] text-[#F5F5F5]">
@@ -152,9 +125,9 @@ export default function RecruiterInterviewsPage() {
           {/* Stat Row */}
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: "Today", value: "2", color: "text-[#D2042D]", dotColor: "bg-[#D2042D]" },
-              { label: "This Week", value: "6", color: "text-[#ecc154]", dotColor: "bg-[#ecc154]" },
-              { label: "Completed", value: "14", color: "text-[#64de87]", dotColor: "bg-[#64de87]" }
+              { label: "Today", value: "0", color: "text-[#D2042D]", dotColor: "bg-[#D2042D]" },
+              { label: "This Week", value: "0", color: "text-[#ecc154]", dotColor: "bg-[#ecc154]" },
+              { label: "Completed", value: String(completedCount), color: "text-[#64de87]", dotColor: "bg-[#64de87]" }
             ].map(stat => (
               <div key={stat.label} className="bg-[#1c1c1e] border border-[#353534] rounded-2xl p-5 flex flex-col gap-2">
                 <div className="flex items-center gap-2">
@@ -166,60 +139,53 @@ export default function RecruiterInterviewsPage() {
             ))}
           </div>
 
-          {/* Interview Cards */}
+          {/* Completed interview cards from real data */}
           <div className="space-y-3">
-            {mockInterviews.map((interview, idx) => (
-              <div key={idx} className="bg-[#1c1c1e] border border-[#353534] hover:border-[#D2042D]/25 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all shadow-lg">
-                <img
-                  src={interview.avatar}
-                  alt={interview.name}
-                  className="w-12 h-12 rounded-full object-cover border-2 border-[#353534] shrink-0"
-                />
-                <div className="flex-grow">
-                  <p className="text-sm font-bold text-white">{interview.name}</p>
-                  <p className="text-[10px] text-[#A3A3A3] mt-1">{interview.role}</p>
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className="flex items-center gap-1 text-[10px] text-[#A3A3A3] font-mono">
-                      <Calendar className="w-3 h-3 text-[#D2042D]" /> {interview.date}
-                    </span>
-                    <span className="flex items-center gap-1 text-[10px] text-[#A3A3A3] font-mono">
-                      <Clock className="w-3 h-3 text-[#ecc154]" /> {interview.time}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className={`px-2.5 py-0.5 border rounded-full text-[9px] font-bold uppercase tracking-wider font-mono ${
-                    interview.status === "Confirmed"
-                      ? "bg-[#64de87]/10 text-[#64de87] border-[#64de87]/20"
-                      : interview.status === "Completed"
-                      ? "bg-[#ecc154]/10 text-[#ecc154] border-[#ecc154]/20"
-                      : "bg-[#353534] text-[#A3A3A3] border-[#353534]/60"
-                  }`}>
-                    {interview.status}
-                  </span>
-                  {interview.status !== "Completed" && (
-                    <a
-                      href={interview.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 bg-[#D2042D] hover:bg-[#D2042D]/90 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-all shadow-md shadow-[#D2042D]/10"
-                    >
-                      <Video className="w-3.5 h-3.5" />
-                      <span>Join</span>
-                    </a>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-[#D2042D]" />
+              </div>
+            ) : reports.length === 0 ? (
+              <div className="bg-[#1c1c1e] border border-[#353534] rounded-2xl p-8 text-center">
+                <p className="text-xs text-[#A3A3A3]">No interview sessions yet. Use AI Shortlisting to generate interviews.</p>
+              </div>
+            ) : (
+              reports.map((report) => (
+                <div key={report.id} className="bg-[#1c1c1e] border border-[#353534] hover:border-[#D2042D]/25 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all shadow-lg">
+                  {report.avatar ? (
+                    <img src={report.avatar} alt={report.name} className="w-12 h-12 rounded-full object-cover border-2 border-[#353534] shrink-0" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-[#D2042D] flex items-center justify-center text-white font-bold text-lg shrink-0">
+                      {report.name.charAt(0)}
+                    </div>
                   )}
-                  {interview.status === "Completed" && (
+                  <div className="flex-grow">
+                    <p className="text-sm font-bold text-white">{report.name}</p>
+                    <p className="text-[10px] text-[#A3A3A3] mt-1">{report.role}</p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="flex items-center gap-1 text-[10px] text-[#A3A3A3] font-mono">
+                        <Calendar className="w-3 h-3 text-[#D2042D]" /> {formatDate(report.createdAt)}
+                      </span>
+                      <span className="flex items-center gap-1 text-[10px] text-[#A3A3A3] font-mono">
+                        <Award className="w-3 h-3 text-[#ecc154]" /> Score: {report.overallScore}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="px-2.5 py-0.5 border rounded-full text-[9px] font-bold uppercase tracking-wider font-mono bg-[#ecc154]/10 text-[#ecc154] border-[#ecc154]/20">
+                      Completed
+                    </span>
                     <button
-                      onClick={() => { setSelectedReport(mockReports[0]); setActiveTab("reports"); }}
+                      onClick={() => { setSelectedReport(report); setActiveTab("reports"); }}
                       className="flex items-center gap-1 bg-[#1c1c1e] hover:bg-[#2d2d30] border border-[#353534] text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-all"
                     >
                       <FileText className="w-3.5 h-3.5 text-[#ecc154]" />
                       <span>View Report</span>
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </section>
       )}
@@ -240,14 +206,17 @@ export default function RecruiterInterviewsPage() {
 
               {/* Report Header */}
               <div className="bg-[#1c1c1e] border border-[#353534] rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5 shadow-lg">
-                <img
-                  src={selectedReport.avatar}
-                  alt={selectedReport.name}
-                  className="w-14 h-14 rounded-full object-cover border-2 border-[#D2042D]/20"
-                />
+                {selectedReport.avatar ? (
+                  <img src={selectedReport.avatar} alt={selectedReport.name} className="w-14 h-14 rounded-full object-cover border-2 border-[#D2042D]/20" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-[#D2042D] flex items-center justify-center text-white font-bold text-xl">
+                    {selectedReport.name.charAt(0)}
+                  </div>
+                )}
                 <div className="flex-grow">
                   <h2 className="text-base font-bold text-white">{selectedReport.name}</h2>
                   <p className="text-xs text-[#A3A3A3] mt-1">{selectedReport.role}</p>
+                  <p className="text-[10px] text-[#A3A3A3] mt-1 font-mono">{formatDate(selectedReport.createdAt)}</p>
                 </div>
                 <div className="grid grid-cols-3 gap-4 text-center shrink-0">
                   {[
@@ -263,6 +232,23 @@ export default function RecruiterInterviewsPage() {
                 </div>
               </div>
 
+              {/* Recommendation Badge */}
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  selectedReport.recommendation === "strong_yes" ? "bg-[#64de87]/15 text-[#64de87] border border-[#64de87]/30" :
+                  selectedReport.recommendation === "yes" ? "bg-[#ecc154]/15 text-[#ecc154] border border-[#ecc154]/30" :
+                  selectedReport.recommendation === "maybe" ? "bg-[#A3A3A3]/15 text-[#A3A3A3] border border-[#A3A3A3]/30" :
+                  "bg-[#D2042D]/15 text-[#D2042D] border border-[#D2042D]/30"
+                }`}>
+                  {selectedReport.recommendation.replace("_", " ")}
+                </span>
+                {selectedReport.needsReview && (
+                  <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#ecc154]/15 text-[#ecc154] border border-[#ecc154]/30">
+                    Needs Review
+                  </span>
+                )}
+              </div>
+
               {/* AI Summary */}
               <div className="bg-[#1c1c1e] border border-[#353534] rounded-2xl p-5 shadow-lg space-y-2">
                 <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -271,13 +257,45 @@ export default function RecruiterInterviewsPage() {
                 <p className="text-xs text-[#A3A3A3] leading-relaxed">{selectedReport.summary}</p>
               </div>
 
+              {/* Strengths & Concerns */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-[#1c1c1e] border border-[#353534] rounded-2xl p-5 shadow-lg space-y-3">
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#64de87]" /> Strengths
+                  </h3>
+                  <ul className="space-y-2">
+                    {selectedReport.strengths.map((s, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-[#A3A3A3]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#64de87] mt-1.5 shrink-0" />
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-[#1c1c1e] border border-[#353534] rounded-2xl p-5 shadow-lg space-y-3">
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-[#D2042D]" /> Concerns
+                  </h3>
+                  <ul className="space-y-2">
+                    {selectedReport.concerns.length > 0 ? selectedReport.concerns.map((c, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-[#A3A3A3]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#D2042D] mt-1.5 shrink-0" />
+                        {c}
+                      </li>
+                    )) : (
+                      <li className="text-xs text-[#A3A3A3]">No concerns flagged.</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+
               {/* Transcript */}
               <div className="bg-[#1c1c1e] border border-[#353534] rounded-2xl p-5 shadow-lg space-y-4">
                 <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[#D2042D]" /> Interview Transcript
                 </h3>
                 <div className="space-y-4">
-                  {selectedReport.transcript.map((entry, idx) => (
+                  {buildTranscript(selectedReport).map((entry, idx) => (
                     <div key={idx} className="bg-[#131313] border border-[#353534] rounded-xl p-4 space-y-2">
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-xs font-bold text-white leading-snug flex-grow">Q{idx + 1}: {entry.question}</p>
@@ -300,31 +318,50 @@ export default function RecruiterInterviewsPage() {
           ) : (
             /* Report List View */
             <div className="space-y-4">
-              <p className="text-xs text-[#A3A3A3] px-1">
-                <span className="text-[#D2042D] font-bold font-mono">{mockReports.length}</span> completed AI interview reports
-              </p>
-              {mockReports.map((report) => (
-                <div
-                  key={report.candidateId}
-                  onClick={() => setSelectedReport(report)}
-                  className="bg-[#1c1c1e] border border-[#353534] hover:border-[#D2042D]/30 rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition-all shadow-lg group"
-                >
-                  <img src={report.avatar} alt={report.name} className="w-12 h-12 rounded-full object-cover border border-[#353534]" />
-                  <div className="flex-grow">
-                    <p className="text-sm font-bold text-white">{report.name}</p>
-                    <p className="text-[10px] text-[#A3A3A3] mt-1">{report.role}</p>
-                    <div className="flex gap-3 mt-2">
-                      <span className="text-[9px] text-[#64de87] font-mono font-bold">Tech: {report.technicalScore}/100</span>
-                      <span className="text-[9px] text-[#ecc154] font-mono font-bold">Comm: {report.communicationScore}/100</span>
-                    </div>
-                  </div>
-                  <div className="text-center shrink-0">
-                    <p className="text-2xl font-black text-[#D2042D] font-mono">{report.overallScore}</p>
-                    <p className="text-[9px] text-[#A3A3A3] uppercase tracking-wider">Overall</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-[#A3A3A3] group-hover:text-[#D2042D] transition-colors" />
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#D2042D]" />
                 </div>
-              ))}
+              ) : reports.length === 0 ? (
+                <div className="bg-[#1c1c1e] border border-[#353534] rounded-2xl p-8 text-center">
+                  <Brain className="w-8 h-8 text-[#A3A3A3] mx-auto mb-3" />
+                  <p className="text-xs text-[#A3A3A3]">No AI interview reports yet. Generate interviews from the shortlisting page.</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-[#A3A3A3] px-1">
+                    <span className="text-[#D2042D] font-bold font-mono">{reports.length}</span> completed AI interview reports
+                  </p>
+                  {reports.map((report) => (
+                    <div
+                      key={report.id}
+                      onClick={() => setSelectedReport(report)}
+                      className="bg-[#1c1c1e] border border-[#353534] hover:border-[#D2042D]/30 rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition-all shadow-lg group"
+                    >
+                      {report.avatar ? (
+                        <img src={report.avatar} alt={report.name} className="w-12 h-12 rounded-full object-cover border border-[#353534]" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-[#D2042D] flex items-center justify-center text-white font-bold text-lg">
+                          {report.name.charAt(0)}
+                        </div>
+                      )}
+                      <div className="flex-grow">
+                        <p className="text-sm font-bold text-white">{report.name}</p>
+                        <p className="text-[10px] text-[#A3A3A3] mt-1">{report.role}</p>
+                        <div className="flex gap-3 mt-2">
+                          <span className="text-[9px] text-[#64de87] font-mono font-bold">Tech: {report.technicalScore}/100</span>
+                          <span className="text-[9px] text-[#ecc154] font-mono font-bold">Comm: {report.communicationScore}/100</span>
+                        </div>
+                      </div>
+                      <div className="text-center shrink-0">
+                        <p className="text-2xl font-black text-[#D2042D] font-mono">{report.overallScore}</p>
+                        <p className="text-[9px] text-[#A3A3A3] uppercase tracking-wider">Overall</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-[#A3A3A3] group-hover:text-[#D2042D] transition-colors" />
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </section>

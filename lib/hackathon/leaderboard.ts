@@ -178,19 +178,21 @@ export async function getHackathonLeaderboard(hackathonId: string): Promise<Rank
       for (const m of members) {
         const { data: profile } = await adminClient
           .from("candidate_profiles")
-          .select("user_id, full_name, headline, talent_score, talent_score_overall, talent_profile, github_username")
-          .eq("id", m.candidate_id)
+          .select("user_id, talent_score, talent_profile, github_username")
+          .eq("user_id", m.candidate_id)
           .maybeSingle();
 
         if (profile) {
           const overall = (typeof profile.talent_score === "object" && profile.talent_score)
             ? (profile.talent_score as any).overallScore
-            : (profile.talent_score_overall ?? 70);
+            : 70;
+
+          const displayName = profile.talent_profile?.resume?.name || profile.github_username || "Team Member";
 
           detailedMembers.push({
             candidate_id: profile.user_id,
-            full_name: profile.full_name || profile.github_username || "Developer",
-            headline: profile.headline || "",
+            full_name: displayName,
+            headline: profile.talent_profile?.resume?.headline || "",
             github_username: profile.github_username,
             talent_score: overall || 70,
             skills: profile.talent_profile?.resume?.skills || []

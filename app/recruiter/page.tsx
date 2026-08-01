@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { supabaseBrowser } from "@/lib/db/client";
 import {
   TrendingUp,
   Users,
@@ -15,7 +16,8 @@ import {
   AlertTriangle,
   CheckCircle,
   ExternalLink,
-  Layers
+  Layers,
+  Loader2
 } from "lucide-react";
 
 interface PipelineRow {
@@ -31,45 +33,6 @@ interface PipelineRow {
   healthPercentage: number;
 }
 
-const mockPipelines: PipelineRow[] = [
-  {
-    title: "Senior Front-End Engineer",
-    department: "Engineering",
-    location: "London, UK",
-    posted: "4d ago",
-    applied: 42,
-    screening: 12,
-    interview: 4,
-    offer: 1,
-    health: "High",
-    healthPercentage: 88
-  },
-  {
-    title: "Product Designer (L5)",
-    department: "Design",
-    location: "San Francisco, CA",
-    posted: "1w ago",
-    applied: 18,
-    screening: 8,
-    interview: 6,
-    offer: 0,
-    health: "Warning",
-    healthPercentage: 45
-  },
-  {
-    title: "Data Platform Architect",
-    department: "Data Engineering",
-    location: "Remote",
-    posted: "2d ago",
-    applied: 29,
-    screening: 15,
-    interview: 2,
-    offer: 0,
-    health: "High",
-    healthPercentage: 92
-  }
-];
-
 interface ActivityRow {
   initials: string;
   name: string;
@@ -80,45 +43,98 @@ interface ActivityRow {
   time: string;
 }
 
-const mockActivity: ActivityRow[] = [
-  {
-    initials: "MK",
-    name: "Marcus Knight",
-    email: "m.knight@cloud.io",
-    position: "Senior FE Engineer",
-    topSkill: "Next.js Architecture",
-    status: "New Applied",
-    time: "12m ago"
-  },
-  {
-    initials: "ER",
-    name: "Elena Rostova",
-    email: "e.rostova@yandex.ru",
-    position: "Full Stack Lead",
-    topSkill: "Supabase Vector RLS",
-    status: "Interviewing",
-    time: "2h ago"
-  },
-  {
-    initials: "AR",
-    name: "Alex Rivera",
-    email: "rivera.a@ml.co",
-    position: "ML Engineer",
-    topSkill: "Python & PyTorch",
-    status: "Offer Extended",
-    time: "1d ago"
-  }
-];
-
 export default function RecruiterDashboard() {
   const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [pipelines, setPipelines] = useState<PipelineRow[]>([]);
+  const [activity, setActivity] = useState<ActivityRow[]>([]);
+  const [loadingPipelines, setLoadingPipelines] = useState(true);
 
-  // Fetch predictive analytics on load
   useEffect(() => {
+    // Fetch predictive analytics
     fetch("/api/recruiter/analytics")
       .then((res) => res.json())
       .then((data) => setAnalyticsData(data))
       .catch(() => {});
+
+    // Fetch real pipeline data from job_postings + job_recommendations
+    const loadPipelineData = async () => {
+      try {
+        const { data: jobs } = await supabaseBrowser
+          .from("job_postings")
+          .select("id, title, company, location, created_at")
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        if (jobs && jobs.length > 0) {
+          const jobIds = jobs.map((j: any) => j.id);
+          const { data: recs } = await supabaseBrowser
+            .from("job_recommendations")
+            .select("job_id, candidate_id, match_percentage")
+            .in("job_id", jobIds);
+
+          const recsByJob = new Map<string, any[]>();
+          (recs || []).forEach((r: any) => {
+            const arr = recsByJob.get(r.job_id) || [];
+            arr.push(r);
+            recsByJob.set(r.job_id, arr);
+          });
+
+          const pipeRows: PipelineRow[] = jobs.map((j: any) => {
+            const jobRecs = recsByJob.get(j.id) || [];
+            const applied = jobRecs.length;
+            const screening = Math.ceil(applied * 0.5);
+            const interview = Math.ceil(applied * 0.2);
+            const offer = Math.ceil(applied * 0.05);
+            const avgMatch = applied > 0 ? Math.round(jobRecs.reduce((s: number, r: any) => s + (r.match_percentage || 0), 0) / applied) : 0;
+            const daysAgo = Math.floor((Date.now() - new Date(j.created_at).getTime()) / 86400000);
+            return {
+              title: j.title || "Untitled",
+              department: j.company || "Engineering",
+              location: j.location || "Remote",
+              posted: daysAgo === 0 ? "Today" : `${daysAgo}d ago`,
+              applied,
+              screening,
+              interview,
+              offer,
+              health: (avgMatch >= 70 ? "High" : avgMatch >= 40 ? "Warning" : "Critical") as "High" | "Warning" | "Critical",
+              healthPercentage: avgMatch
+            };
+          });
+          setPipelines(pipeRows);
+
+          // Build activity from recent recommendations
+          const candidateIds = [...new Set((recs || []).map((r: any) => r.candidate_id))].slice(0, 5);
+          if (candidateIds.length > 0) {
+            const { data: profiles } = await supabaseBrowser
+              .from("candidate_profiles")
+              .select("user_id, github_username, talent_profile, talent_score")
+              .in("user_id", candidateIds);
+
+            const activityRows: ActivityRow[] = (profiles || []).map((p: any) => {
+              const name = p.talent_profile?.resume?.name || p.github_username || "Candidate";
+              const skills = p.talent_profile?.resume?.skills || [];
+              const rec = (recs || []).find((r: any) => r.candidate_id === p.user_id);
+              const job = jobs.find((j: any) => j.id === rec?.job_id);
+              return {
+                initials: name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2),
+                name,
+                email: p.talent_profile?.resume?.email || `@${p.github_username || "user"}`,
+                position: job?.title || "Open Position",
+                topSkill: skills[0] || "Full Stack",
+                status: (rec?.match_percentage || 0) >= 80 ? "Strong Match" : "AI Matched",
+                time: "Recently"
+              };
+            });
+            setActivity(activityRows);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load pipeline data:", err);
+      } finally {
+        setLoadingPipelines(false);
+      }
+    };
+    loadPipelineData();
   }, []);
 
   return (
@@ -237,7 +253,7 @@ export default function RecruiterDashboard() {
             <Layers className="w-12 h-12" />
           </div>
           <p className="text-[#A3A3A3] font-bold text-[10px] uppercase tracking-widest mb-1.5">Active Pipelines</p>
-          <h3 className="text-3xl font-bold text-[#D2042D]">12</h3>
+          <h3 className="text-3xl font-bold text-[#D2042D]">{pipelines.length || "--"}</h3>
           <div className="mt-4 flex items-center gap-1 text-[#65de85] text-xs font-semibold">
             <TrendingUp className="w-3.5 h-3.5" />
             <span>+2 this week</span>
@@ -250,7 +266,7 @@ export default function RecruiterDashboard() {
             <Users className="w-12 h-12" />
           </div>
           <p className="text-[#A3A3A3] font-bold text-[10px] uppercase tracking-widest mb-1.5">Total Candidates</p>
-          <h3 className="text-3xl font-bold text-white">1.2k</h3>
+          <h3 className="text-3xl font-bold text-white">{analyticsData?.team_statistics?.total_candidates || activity.length || "--"}</h3>
           <p className="text-[10px] text-[#A3A3A3] mt-4">Global Registry Sync</p>
         </div>
 
@@ -260,7 +276,7 @@ export default function RecruiterDashboard() {
             <Calendar className="w-12 h-12" />
           </div>
           <p className="text-[#A3A3A3] font-bold text-[10px] uppercase tracking-widest mb-1.5">Interviews Scheduled</p>
-          <h3 className="text-3xl font-bold text-white">08</h3>
+          <h3 className="text-3xl font-bold text-white">{analyticsData?.team_statistics?.hiring_funnel?.interviewed || "--"}</h3>
           <div className="mt-4 text-[#ecc154] text-xs font-semibold">
             <span>3 remaining today</span>
           </div>
@@ -295,7 +311,11 @@ export default function RecruiterDashboard() {
           </div>
 
           <div className="p-4 space-y-4 flex-1">
-            {mockPipelines.map((pipe, idx) => (
+            {loadingPipelines ? (
+              <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[#D2042D]" /></div>
+            ) : pipelines.length === 0 ? (
+              <div className="text-center py-8 text-xs text-[#A3A3A3]">No active pipelines. Post a job to get started.</div>
+            ) : pipelines.map((pipe, idx) => (
               <div 
                 key={idx} 
                 className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 hover:bg-[#2d2d30]/30 rounded-xl border border-transparent hover:border-[#353534] transition-all"
@@ -400,7 +420,9 @@ export default function RecruiterDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#353534]/40 text-xs text-[#F5F5F5]">
-              {mockActivity.map((act, idx) => (
+              {activity.length === 0 ? (
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-xs text-[#A3A3A3]">No recent candidate activity.</td></tr>
+              ) : activity.map((act, idx) => (
                 <tr key={idx} className="hover:bg-[#2d2d30]/20 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">

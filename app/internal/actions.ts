@@ -899,11 +899,11 @@ export async function seedHackathonTestData() {
     // 4. Map candidates to teams
     const { data: candidates } = await adminClient
       .from("candidate_profiles")
-      .select("id, user_id");
+      .select("user_id");
 
-    const candA = candidates?.find(c => c.user_id === "0ee73e0e-0529-4480-a16c-15748a277bde")?.id;
-    const candB = candidates?.find(c => c.user_id === "1ee73e0e-0529-4480-a16c-15748a277bdf")?.id;
-    const candC = candidates?.find(c => c.user_id === "2ee73e0e-0529-4480-a16c-15748a277be0")?.id;
+    const candA = candidates?.find(c => c.user_id === "0ee73e0e-0529-4480-a16c-15748a277bde")?.user_id;
+    const candB = candidates?.find(c => c.user_id === "1ee73e0e-0529-4480-a16c-15748a277bdf")?.user_id;
+    const candC = candidates?.find(c => c.user_id === "2ee73e0e-0529-4480-a16c-15748a277be0")?.user_id;
 
     if (!candA || !candB || !candC) {
       throw new Error("Could not locate candidates in candidate_profiles to seed hackathon members.");

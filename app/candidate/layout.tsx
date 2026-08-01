@@ -113,9 +113,9 @@ export default function CandidateLayout({ children }: { children: React.ReactNod
           <div className="h-6 w-[1px] bg-[#353534]"></div>
           
           <div className="flex items-center gap-3 group relative cursor-pointer ml-4">
-            <p className="text-sm font-medium text-[#F5F5F5] hidden sm:block">{user?.name || "Sarah Jenkins"}</p>
+            <p className="text-sm font-medium text-[#F5F5F5] hidden sm:block">{user?.name || "Candidate"}</p>
             <div className="h-10 w-10 rounded-full bg-[#D2042D] border-transparent flex items-center justify-center text-lg font-bold text-white">
-              {user?.name ? user.name.split(" ").map((n: string) => n[0]).join("") : "SJ"}
+              {user?.name ? user.name.split(" ").map((n: string) => n[0]).join("") : "C"}
             </div>
             <ChevronDown className="w-5 h-5 text-[#A3A3A3]" />
           </div>

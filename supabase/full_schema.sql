@@ -93,6 +93,54 @@ create table if not exists public.job_recommendations (
   unique (job_id, candidate_id)
 );
 
+-- 9. Pipeline Stages Table
+create table if not exists public.pipeline_stages (
+  id uuid primary key default gen_random_uuid(),
+  candidate_id uuid not null,
+  job_id uuid not null,
+  stage text not null default 'Sourced',
+  recruiter_id uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(candidate_id, job_id)
+);
+
+-- 10. Hackathons Table
+create table if not exists public.hackathons (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  date timestamptz,
+  description text,
+  created_at timestamptz not null default now()
+);
+
+-- 11. Hackathon Teams Table
+create table if not exists public.hackathon_teams (
+  id uuid primary key default gen_random_uuid(),
+  hackathon_id uuid not null references public.hackathons(id) on delete cascade,
+  team_name text not null,
+  created_at timestamptz not null default now()
+);
+
+-- 12. Hackathon Members Table
+create table if not exists public.hackathon_members (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references public.hackathon_teams(id) on delete cascade,
+  candidate_id uuid not null,
+  created_at timestamptz not null default now()
+);
+
+-- Add FK constraints to job_recommendations
+do $$
+begin
+  if not exists (select 1 from information_schema.table_constraints where constraint_name = 'fk_job_recommendations_job') then
+    alter table public.job_recommendations add constraint fk_job_recommendations_job foreign key (job_id) references public.job_postings(id) on delete cascade;
+  end if;
+  if not exists (select 1 from information_schema.table_constraints where constraint_name = 'fk_job_recommendations_candidate') then
+    alter table public.job_recommendations add constraint fk_job_recommendations_candidate foreign key (candidate_id) references public.users(id) on delete cascade;
+  end if;
+end $$;
+
 -- Enable RLS on all tables
 alter table public.users enable row level security;
 alter table public.agent_responses enable row level security;
@@ -101,6 +149,10 @@ alter table public.job_postings enable row level security;
 alter table public.candidate_embeddings enable row level security;
 alter table public.job_embeddings enable row level security;
 alter table public.job_recommendations enable row level security;
+alter table public.pipeline_stages enable row level security;
+alter table public.hackathons enable row level security;
+alter table public.hackathon_teams enable row level security;
+alter table public.hackathon_members enable row level security;
 
 -- Permissive RLS Policies for Development
 create policy "Allow public full access on users" on public.users for all using (true);
@@ -110,6 +162,10 @@ create policy "Allow public full access on job_postings" on public.job_postings 
 create policy "Allow public full access on candidate_embeddings" on public.candidate_embeddings for all using (true);
 create policy "Allow public full access on job_embeddings" on public.job_embeddings for all using (true);
 create policy "Allow public full access on job_recommendations" on public.job_recommendations for all using (true);
+create policy "Allow full access on pipeline_stages" on public.pipeline_stages for all using (true);
+create policy "Allow full access on hackathons" on public.hackathons for all using (true);
+create policy "Allow full access on hackathon_teams" on public.hackathon_teams for all using (true);
+create policy "Allow full access on hackathon_members" on public.hackathon_members for all using (true);
 
 -- HNSW Vector Indexes
 create index if not exists candidate_embeddings_hnsw_idx 

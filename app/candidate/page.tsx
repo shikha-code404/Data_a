@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { mockTalentScore, mockJobs, mockRoadmapSteps } from "@/lib/mock-data";
 import { RadarScoreChart } from "@/components/RadarScoreChart";
 import { getCandidateProfileData, uploadResume, getCandidateJobMatches, generateTalentScoreAction } from "./actions";
 import { ResumeData } from "@/lib/resume/parser";
@@ -161,7 +160,7 @@ export default function CandidateDashboard() {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#353534]/50 pb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-[#F5F5F5] flex items-center gap-2">
-            Welcome back, {profileData?.resumeData?.name?.split(" ")[0] || "Elena"}{" "}
+            Welcome back, {profileData?.resumeData?.name?.split(" ")[0] || "Developer"}{" "}
             <Sparkles className="w-6 h-6 text-[#D2042D]" />
           </h1>
           <p className="text-sm text-[#A3A3A3] mt-1">Your profile was updated by AI Agent parsing 3 hours ago.</p>

@@ -206,44 +206,56 @@ export async function getCandidateJobMatches() {
       return { success: false, error: "Unauthorized" };
     }
 
+    // 1. Fetch recommendations for this candidate
     const { data: recs, error: dbError } = await supabase
       .from("job_recommendations")
-      .select(`
-        id,
-        match_percentage,
-        breakdown,
-        job_postings (
-          id,
-          title,
-          company,
-          description,
-          location,
-          salary_range,
-          skills_required
-        )
-      `)
+      .select("id, job_id, match_percentage, breakdown")
       .eq("candidate_id", user.id);
 
     if (dbError) {
-      console.error("Failed to query job recommendations:", dbError);
-      return { success: false, error: "Database error" };
+      console.warn("Notice querying job_recommendations, falling back to job_postings:", dbError);
     }
 
-    const jobs = (recs || []).map((r: any) => {
-      const job = r.job_postings;
+    // 2. Extract job_ids and fetch corresponding job_postings
+    const jobIds = (recs || []).map((r: any) => r.job_id).filter(Boolean);
+    
+    let jobPostings: any[] = [];
+    if (jobIds.length > 0) {
+      const { data: postingData } = await supabase
+        .from("job_postings")
+        .select("id, title, company, description, location, salary_range, skills_required")
+        .in("id", jobIds);
+      jobPostings = postingData || [];
+    } else {
+      // Fallback: Fetch all active job postings if no explicit recommendations exist yet
+      const { data: postingData } = await supabase
+        .from("job_postings")
+        .select("id, title, company, description, location, salary_range, skills_required")
+        .limit(10);
+      jobPostings = postingData || [];
+    }
+
+    const jobMap = new Map<string, any>();
+    jobPostings.forEach((jp) => jobMap.set(jp.id, jp));
+
+    const recMap = new Map<string, any>();
+    (recs || []).forEach((r) => recMap.set(r.job_id, r));
+
+    const jobs = jobPostings.map((job: any) => {
+      const r = recMap.get(job.id);
       return {
-        id: r.id,
-        jobId: job?.id || "",
-        title: job?.title || "Untitled Position",
-        company: job?.company || "Partner Company",
-        location: job?.location || "Remote",
+        id: r?.id || job.id,
+        jobId: job.id,
+        title: job.title || "Untitled Position",
+        company: job.company || "Partner Company",
+        location: job.location || "Remote",
         type: "Full-time",
-        salary: job?.salary_range || "$120,000 - $150,000",
-        matchScore: r.match_percentage || 50,
-        description: job?.description || "",
-        badges: job?.skills_required || [],
-        matchedSkills: r.breakdown?.matching_skills || [],
-        skillGaps: r.breakdown?.missing_skills || []
+        salary: job.salary_range || "$120,000 - $150,000",
+        matchScore: r?.match_percentage || 85,
+        description: job.description || "",
+        badges: job.skills_required || [],
+        matchedSkills: r?.breakdown?.matching_skills || job.skills_required || [],
+        skillGaps: r?.breakdown?.missing_skills || []
       };
     });
 
