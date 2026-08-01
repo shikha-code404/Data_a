@@ -39,7 +39,6 @@ const GitHubIcon = ({ className }: { className?: string }) => (
 
 export default function CandidateDashboard() {
   const router = useRouter();
-  const [isLoadingState, setIsLoadingState] = useState(false);
   
   // Profile integrations state
   const [profileData, setProfileData] = useState<{
@@ -165,96 +164,7 @@ export default function CandidateDashboard() {
           </h1>
           <p className="text-sm text-[#A3A3A3] mt-1">Your profile was updated by AI Agent parsing 3 hours ago.</p>
         </div>
-        <div className="flex items-center gap-3 bg-[#262626] px-4 py-2 rounded-full border border-[#353535]">
-          <span className="text-xs font-semibold text-[#A3A3A3]">Show Loading State:</span>
-          <button 
-            onClick={() => setIsLoadingState(!isLoadingState)}
-            className={`w-10 h-6 rounded-full relative transition-colors duration-250 focus:outline-none ${isLoadingState ? "bg-[#D2042D]" : "bg-[#353535]"}`}
-          >
-            <span className={`absolute top-1 w-4 h-4 bg-[#F5F5F5] rounded-full transition-transform duration-250 ${isLoadingState ? "left-5" : "left-1"}`}></span>
-          </button>
-        </div>
       </header>
-
-      {isLoadingState ? (
-        // ================= LOADING SKELETON STATE =================
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column (2/3) */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
-            {/* Talent Score Analytics Card Skeleton */}
-            <div className="bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col gap-6 animate-pulse-subtle">
-              <div className="flex justify-between items-center">
-                <div className="h-6 w-48 bg-[#353535] rounded"></div>
-                <div className="h-10 w-24 bg-[#353535] rounded"></div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#171717] rounded-lg p-6 border border-[#353535]">
-                <div className="h-56 bg-[#262626] rounded-full w-56 mx-auto"></div>
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="space-y-2">
-                      <div className="h-4 bg-[#262626] rounded w-1/3"></div>
-                      <div className="h-2 bg-[#262626] rounded-full w-full"></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* AI Resume Parsing Card Skeleton */}
-            <div className="bg-[#262626] border border-[#353535] rounded-xl p-6 flex flex-col gap-4 animate-pulse-subtle">
-              <div className="h-5 bg-[#353535] rounded w-1/4"></div>
-              <div className="h-3 bg-[#353535] rounded w-2/3"></div>
-              <div className="h-32 bg-[#171717] rounded-lg border-2 border-dashed border-[#353535]"></div>
-            </div>
-
-            {/* Top Job Matches Skeleton */}
-            <div className="space-y-4">
-              <div className="h-6 bg-[#353535] rounded w-1/3 animate-pulse-subtle"></div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-[#262626] border border-[#353535] rounded-xl p-6 h-80 flex flex-col justify-between animate-pulse-subtle">
-                    <div className="space-y-4">
-                      <div className="flex justify-between">
-                        <div className="h-5 bg-[#353535] rounded w-2/3"></div>
-                        <div className="h-6 bg-[#353535] rounded-full w-12"></div>
-                      </div>
-                      <div className="h-4 bg-[#353535] rounded w-1/4"></div>
-                      <div className="space-y-2">
-                        <div className="h-3 bg-[#353535] rounded w-full"></div>
-                        <div className="h-3 bg-[#353535] rounded w-5/6"></div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="h-10 bg-[#353535] rounded-lg flex-1"></div>
-                      <div className="h-10 bg-[#353535] rounded-lg flex-1"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column (1/3) */}
-          <div className="lg:col-span-4 flex flex-col gap-6 animate-pulse-subtle">
-            <div className="bg-[#262626] border border-[#353535] rounded-xl p-6 h-96">
-              <div className="h-5 bg-[#353535] rounded w-1/2 mb-4"></div>
-              <div className="h-3 bg-[#353535] rounded w-3/4 mb-6"></div>
-              <div className="space-y-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex gap-4">
-                    <div className="w-5 h-5 rounded-full bg-[#353535]"></div>
-                    <div className="space-y-2 flex-1">
-                      <div className="h-4 bg-[#353535] rounded w-1/3"></div>
-                      <div className="h-3 bg-[#353535] rounded w-full"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        // ================= LOADED VIEW STATE =================
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Left Column (2/3) */}
@@ -638,7 +548,6 @@ export default function CandidateDashboard() {
             </div>
           </aside>
         </div>
-      )}
     </div>
   );
 }

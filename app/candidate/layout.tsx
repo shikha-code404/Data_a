@@ -12,14 +12,16 @@ import {
   Award,
   Briefcase,
   Trophy,
-  FileText
+  FileText,
+  LogOut
 } from "lucide-react";
 
 export default function CandidateLayout({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const pathname = usePathname();
   const [isInsightsOpen, setIsInsightsOpen] = useState(false);
   const [isJobsOpen, setIsJobsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Determine active states
   const isOverviewActive = pathname === "/candidate";
@@ -112,12 +114,43 @@ export default function CandidateLayout({ children }: { children: React.ReactNod
           </button>
           <div className="h-6 w-[1px] bg-[#353534]"></div>
           
-          <div className="flex items-center gap-3 group relative cursor-pointer ml-4">
-            <p className="text-sm font-medium text-[#F5F5F5] hidden sm:block">{user?.name || "Candidate"}</p>
-            <div className="h-10 w-10 rounded-full bg-[#D2042D] border-transparent flex items-center justify-center text-lg font-bold text-white">
-              {user?.name ? user.name.split(" ").map((n: string) => n[0]).join("") : "C"}
+          <div className="relative">
+            <div 
+              className="flex items-center gap-3 cursor-pointer ml-4"
+              onClick={() => setIsProfileOpen(!isProfileOpen)}
+            >
+              <p className="text-sm font-medium text-[#F5F5F5] hidden sm:block">{user?.name || "Candidate"}</p>
+              <div className="h-10 w-10 rounded-full bg-[#D2042D] border-transparent flex items-center justify-center text-lg font-bold text-white">
+                {user?.name ? user.name.split(" ").map((n: string) => n[0]).join("") : "C"}
+              </div>
+              <ChevronDown className={`w-5 h-5 text-[#A3A3A3] transition-transform duration-200 ${isProfileOpen ? "rotate-180" : ""}`} />
             </div>
-            <ChevronDown className="w-5 h-5 text-[#A3A3A3]" />
+
+            {isProfileOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-30 cursor-default" 
+                  onClick={() => setIsProfileOpen(false)} 
+                />
+                <div className="absolute right-0 mt-2.5 w-56 bg-[#262626] border border-[#353534] rounded-xl shadow-2xl py-2 z-40">
+                  <div className="px-4 py-2.5 border-b border-[#353534] mb-1.5">
+                    <p className="text-[10px] uppercase tracking-wider text-[#A3A3A3]">Signed in as</p>
+                    <p className="text-xs font-bold text-[#F5F5F5] truncate mt-0.5">{user?.email}</p>
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      logout();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-xs font-semibold text-red-400 hover:bg-red-950/25 hover:text-red-300 transition-all rounded-lg"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </header>

@@ -1,9 +1,4 @@
-if (typeof (globalThis as any).DOMMatrix === "undefined") {
-  (globalThis as any).DOMMatrix = class DOMMatrix {
-    a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
-  };
-}
-const pdf = require("pdf-parse");
+// OCR.space API text extraction integration
 import { z } from "zod";
 import { callAgent } from "../agents/callAgent";
 import { getSupabaseAdmin } from "../db/client";
@@ -57,14 +52,14 @@ export type ResumeData = z.infer<typeof ResumeDataSchema>;
  */
 function sanitizePartialRecord(raw: any): ResumeData {
   return {
-    name: typeof raw?.name === "string" ? raw.name : "Unparsed Name",
+    name: typeof raw?.name === "string" ? raw.name : "",
     email: typeof raw?.email === "string" ? raw.email : null,
     phone: typeof raw?.phone === "string" ? raw.phone : null,
     education: Array.isArray(raw?.education)
       ? raw.education.map((edu: any) => ({
-          institution: typeof edu?.institution === "string" ? edu.institution : "Unknown",
-          degree: typeof edu?.degree === "string" ? edu.degree : "Unknown",
-          field: typeof edu?.field === "string" ? edu.field : "Unknown",
+          institution: typeof edu?.institution === "string" ? edu.institution : "",
+          degree: typeof edu?.degree === "string" ? edu.degree : "",
+          field: typeof edu?.field === "string" ? edu.field : "",
           start_year: typeof edu?.start_year === "number" ? edu.start_year : null,
           end_year: typeof edu?.end_year === "number" ? edu.end_year : null,
           gpa: typeof edu?.gpa === "string" || typeof edu?.gpa === "number" ? String(edu.gpa) : null,
@@ -72,16 +67,16 @@ function sanitizePartialRecord(raw: any): ResumeData {
       : [],
     experience: Array.isArray(raw?.experience)
       ? raw.experience.map((exp: any) => ({
-          company: typeof exp?.company === "string" ? exp.company : "Unknown",
-          role: typeof exp?.role === "string" ? exp.role : "Unknown",
-          start_date: typeof exp?.start_date === "string" || typeof exp?.start_date === "number" ? String(exp.start_date) : "Unknown",
+          company: typeof exp?.company === "string" ? exp.company : "",
+          role: typeof exp?.role === "string" ? exp.role : "",
+          start_date: typeof exp?.start_date === "string" || typeof exp?.start_date === "number" ? String(exp.start_date) : "",
           end_date: typeof exp?.end_date === "string" || typeof exp?.end_date === "number" ? String(exp.end_date) : null,
           description: typeof exp?.description === "string" ? exp.description : "",
         }))
       : [],
     projects: Array.isArray(raw?.projects)
       ? raw.projects.map((proj: any) => ({
-          name: typeof proj?.name === "string" ? proj.name : "Unknown",
+          name: typeof proj?.name === "string" ? proj.name : "",
           description: typeof proj?.description === "string" ? proj.description : "",
           technologies: Array.isArray(proj?.technologies)
             ? proj.technologies.filter((t: any) => typeof t === "string")
@@ -90,8 +85,8 @@ function sanitizePartialRecord(raw: any): ResumeData {
       : [],
     certifications: Array.isArray(raw?.certifications)
       ? raw.certifications.map((cert: any) => ({
-          name: typeof cert?.name === "string" ? cert.name : "Unknown",
-          issuer: typeof cert?.issuer === "string" ? cert.issuer : "Unknown",
+          name: typeof cert?.name === "string" ? cert.name : "",
+          issuer: typeof cert?.issuer === "string" ? cert.issuer : "",
           year: typeof cert?.year === "number" ? cert.year : null,
         }))
       : [],
@@ -108,45 +103,89 @@ function sanitizePartialRecord(raw: any): ResumeData {
  * Stage 3: Template fallback (never returns empty)
  */
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
-  // Stage 1: Try pdf-parse
+  let ocrFailedDueToNetworkOrApi = false;
+  let ocrError: any = null;
+
+  // Stage 1: Try OCR.space API
   try {
-    let pdfParser = pdf;
-    if (typeof pdfParser !== "function" && (pdfParser as any)?.default) {
-      pdfParser = (pdfParser as any).default;
-    }
-    if (typeof pdfParser === "function") {
-      const data = await pdfParser(buffer);
-      if (data?.text) {
-        const cleaned = data.text.replace(/\s+/g, " ").trim();
-        if (cleaned.length > 30) {
-          console.log(`[PDF Parser] pdf-parse extracted ${cleaned.length} chars`);
-          return cleaned;
-        }
+    const ocrApiKey = process.env.OCR_SPACE_API_KEY || "K82218491888957"; 
+    console.log(`[PDF Parser] Runtime environment check: process.env.OCR_SPACE_API_KEY is ${process.env.OCR_SPACE_API_KEY ? `defined (length: ${process.env.OCR_SPACE_API_KEY.length})` : "undefined/empty"}`);
+    
+    const fileBlob = new Blob([new Uint8Array(buffer)], { type: "application/pdf" });
+    const formData = new FormData();
+    formData.append("apikey", ocrApiKey);
+    formData.append("file", fileBlob, "resume.pdf");
+    formData.append("filetype", "PDF");
+    formData.append("OCREngine", "2");
+
+    console.log("[PDF Parser] Sending PDF to OCR.space API: https://api.ocr.space/parse/image ...");
+    const response = await fetch("https://api.ocr.space/parse/image", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      ocrFailedDueToNetworkOrApi = true;
+      let errorBody = "";
+      try {
+        errorBody = await response.text();
+      } catch (readErr) {
+        errorBody = "(failed to read response body)";
       }
+      throw new Error(`OCR.space API responded with status ${response.status}. Response Body: ${errorBody}`);
     }
-  } catch (err) {
-    console.warn("[PDF Parser] pdf-parse failed, trying binary fallback:", err);
+
+    const resData = await response.json();
+    
+    if (resData.IsErroredOnProcessing) {
+      const errMsg = Array.isArray(resData.ErrorMessage) 
+        ? resData.ErrorMessage.join(", ") 
+        : (resData.ErrorMessage || "Unknown processing error");
+      throw new Error(`OCR.space processing error: ${errMsg}`);
+    }
+
+    const parsedText = resData.ParsedResults?.[0]?.ParsedText;
+    if (!parsedText || !parsedText.trim()) {
+      throw new Error("OCR.space returned empty parsed text.");
+    }
+
+    const cleaned = parsedText.replace(/\s+/g, " ").trim();
+    if (cleaned.length > 30) {
+      console.log(`[PDF Parser] OCR.space extracted ${cleaned.length} chars`);
+      return cleaned;
+    }
+  } catch (err: any) {
+    ocrError = err;
+    console.error("[PDF Parser] OCR.space extraction failed:", err);
+    if (err.message && (err.message.includes("fetch failed") || err.message.includes("responded with status") || err.message.includes("Network"))) {
+      ocrFailedDueToNetworkOrApi = true;
+    }
   }
 
-  // Stage 2: Extract printable ASCII from raw PDF binary stream
-  try {
-    const rawString = buffer.toString("binary");
-    const extractedText = rawString
-      .replace(/[^\x20-\x7E\n\r\t]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    if (extractedText.length > 50) {
-      console.log(`[PDF Parser] Binary fallback extracted ${extractedText.length} chars`);
-      return extractedText;
-    }
-  } catch (binErr) {
-    console.warn("[PDF Parser] Binary extraction failed:", binErr);
+  if (ocrError && !ocrFailedDueToNetworkOrApi) {
+    throw ocrError;
   }
 
-  // Stage 3: Never return empty — use a template so the AI parser can still produce a valid schema
-  console.warn("[PDF Parser] All extraction methods failed. Using template fallback.");
-  return "Candidate Resume PDF - Software Developer with experience in modern web technologies including React, TypeScript, Node.js, Next.js, PostgreSQL, Python, and Full-Stack Web Applications. Education includes Computer Science degree. Skills include problem solving, teamwork, and software architecture.";
+  // Stage 2: Extract printable ASCII from raw PDF binary stream (only if OCR call failed due to network/API error)
+  if (ocrFailedDueToNetworkOrApi) {
+    try {
+      console.log("[PDF Parser] OCR.space network/API error. Trying last resort binary fallback...");
+      const rawString = buffer.toString("binary");
+      const extractedText = rawString
+        .replace(/[^\x20-\x7E\n\r\t]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (extractedText.length > 50 && !extractedText.includes("%PDF-")) {
+        console.log(`[PDF Parser] Binary fallback extracted ${extractedText.length} chars`);
+        return extractedText;
+      }
+    } catch (binErr) {
+      console.warn("[PDF Parser] Binary extraction failed:", binErr);
+    }
+  }
+
+  throw ocrError || new Error("Could not extract meaningful text from this PDF. It may be corrupted, encrypted, or contain only scanned images.");
 }
 
 /**
@@ -155,7 +194,7 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
 export async function parseResumeAndSave(
   rawText: string,
   userId: string
-): Promise<{ success: boolean; data: ResumeData; needsReview: boolean }> {
+): Promise<{ success: boolean; data: ResumeData; needsReview: boolean; error?: string }> {
   const adminClient = getSupabaseAdmin();
   
   const basePrompt = `You are a professional resume parser. Parse the following raw text from a candidate's resume PDF and return a valid JSON object matching this exact schema:
@@ -182,7 +221,10 @@ ${rawText}`;
   // 1. Attempt 1: Call resume_parser
   console.log(`[Resume Parser Attempt 1] Calling callAgent for userId: ${userId}`);
   try {
-    const rawResponse = await callAgent("resume_parser", { prompt: basePrompt });
+    const rawResponse = await callAgent("resume_parser", {
+      prompt: basePrompt,
+      timestamp: Date.now()
+    });
     const validation = ResumeDataSchema.safeParse(rawResponse);
 
     if (validation.success) {
@@ -209,6 +251,7 @@ ${rawText}`;
       const rawRetryResponse = await callAgent("resume_parser", {
         prompt: retryPrompt,
         validation_errors: errorList,
+        timestamp: Date.now()
       });
 
       const retryValidation = ResumeDataSchema.safeParse(rawRetryResponse);
@@ -243,7 +286,7 @@ ${rawText}`;
 
   if (dbError) {
     console.error("Failed to save resume_data to candidate_profiles:", dbError);
-    return { success: false, data: finalData, needsReview };
+    return { success: false, data: finalData, needsReview, error: dbError.message };
   }
 
   return { success: true, data: finalData, needsReview };

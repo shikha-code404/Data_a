@@ -17,26 +17,46 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 1. Extract text from PDF buffer
+    // 1. Determine target user ID and verify session first
+    const supabase = await createServerDbClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user?.id) {
+      console.warn("Unauthorized API call to candidate resume endpoint:", authError);
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Please log in first." },
+        { status: 401 }
+      );
+    }
+    const userId = user.id;
+
+    // 2. Extract text from PDF buffer
     let rawText = "";
     try {
       rawText = await extractTextFromPDF(buffer);
     } catch (pdfErr) {
-      console.warn("pdf-parse fallback applied:", pdfErr);
-      rawText = `Parsed Resume File: ${file.name}. Full Stack Software Engineer skilled in React, Next.js, TypeScript, Supabase, Node.js, Python, and SQL with 3+ years experience building web applications.`;
+      console.error("PDF text extraction failed:", pdfErr);
+      return NextResponse.json(
+        { success: false, error: "Could not extract text from this PDF — try a different file or format" },
+        { status: 422 }
+      );
     }
 
     if (!rawText || !rawText.trim()) {
-      rawText = `Parsed Resume File: ${file.name}. Full Stack Developer skilled in React, Next.js, TypeScript, Supabase, and Node.js.`;
+      return NextResponse.json(
+        { success: false, error: "Could not extract text from this PDF — try a different file or format" },
+        { status: 422 }
+      );
     }
-
-    // 2. Determine target user ID
-    const supabase = await createServerDbClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || "0ee73e0e-0529-4480-a16c-15748a277bde";
 
     // 3. Run AI resume parser and update DB
     const parseResult = await parseResumeAndSave(rawText, userId);
+
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: parseResult.error || "Failed to save parsed resume data to candidate profile." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getCandidateProfileData, completeOnboarding } from "../actions";
 import {
@@ -22,7 +22,7 @@ const GithubIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export default function CandidateOnboarding() {
+function CandidateOnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -321,5 +321,17 @@ export default function CandidateOnboarding() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function CandidateOnboarding() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] text-white">
+        <Loader2 className="w-8 h-8 animate-spin text-[#ecc154]" />
+      </div>
+    }>
+      <CandidateOnboardingContent />
+    </Suspense>
   );
 }

@@ -182,20 +182,129 @@ export async function callAgent(agentType: string, input: object): Promise<objec
         source = "local_explainer_parser";
       } else if (agentType === "resume_parser") {
         const promptStr = (input as any)?.prompt || JSON.stringify(input);
-        const lower = promptStr.toLowerCase();
-        const extractedSkills: string[] = ["React", "Next.js", "TypeScript", "Node.js", "Supabase", "Python"];
-        if (lower.includes("docker")) extractedSkills.push("Docker");
-        if (lower.includes("fastapi")) extractedSkills.push("FastAPI");
-        if (lower.includes("sql")) extractedSkills.push("SQL");
+        
+        // Extract raw resume text from basePrompt
+        const rawTextStart = promptStr.indexOf("RAW RESUME TEXT:");
+        const resumeText = rawTextStart !== -1 ? promptStr.substring(rawTextStart + 16).trim() : promptStr;
+        const lowerText = resumeText.toLowerCase();
+
+        // 1. Extract Email
+        const emailMatch = resumeText.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+        const email = emailMatch ? emailMatch[1] : null;
+
+        // 2. Extract Phone
+        const phoneMatch = resumeText.match(/(\+?\d{1,3}[-.\s]??\(?\d{1,3}\)?[-.\s]??\d{3,4}[-.\s]??\d{4})/);
+        const phone = phoneMatch ? phoneMatch[0] : null;
+
+        // 3. Extract Name from start of resumeText
+        let name = "";
+        const startChunk = resumeText.substring(0, 100).trim();
+        const nameMatch = startChunk.match(/^([A-Z][a-zA-Z\.\-]+(?:\s+[A-Z][a-zA-Z\.\-]+){1,2})/);
+        if (nameMatch) {
+          name = nameMatch[1];
+        }
+
+        // 4. Extract Skills
+        const skillList = [
+          "React", "Next.js", "TypeScript", "JavaScript", "Node.js", "Express", 
+          "Python", "Django", "Flask", "FastAPI", "PostgreSQL", "MongoDB", "MySQL", 
+          "Firebase", "Supabase", "Docker", "Kubernetes", "AWS", "Google Cloud", 
+          "Azure", "Git", "GitHub", "HTML", "CSS", "Tailwind", "Bootstrap", 
+          "Redux", "GraphQL", "REST API", "Java", "Spring Boot", "C++", "C#", "Rust", 
+          "Go", "Golang", "PHP", "Laravel", "Ruby", "Ruby on Rails", "Machine Learning", 
+          "Deep Learning", "TensorFlow", "PyTorch", "Scikit-Learn", "Pandas", "NumPy"
+        ];
+        const extractedSkills: string[] = [];
+        for (const skill of skillList) {
+          const lowerSkill = skill.toLowerCase();
+          if (lowerSkill === "c++") {
+            if (lowerText.includes("c++")) extractedSkills.push(skill);
+          } else if (lowerSkill === "c#") {
+            if (lowerText.includes("c#")) extractedSkills.push(skill);
+          } else if (lowerSkill === "next.js") {
+            if (lowerText.includes("next.js") || lowerText.includes("nextjs")) extractedSkills.push(skill);
+          } else if (lowerSkill === "node.js") {
+            if (lowerText.includes("node.js") || lowerText.includes("nodejs")) extractedSkills.push(skill);
+          } else {
+            const escaped = lowerSkill.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(`\\b${escaped}\\b`);
+            if (regex.test(lowerText)) {
+              extractedSkills.push(skill);
+            }
+          }
+        }
+
+        // 5. Extract Education Institution
+        const education = [];
+        const eduMatches = resumeText.match(/([A-Z][a-zA-Z\s,]+(?:University|College|Institute|Academy|School)(?:\sof\s[A-Z][a-zA-Z\s,]+)?)/g);
+        if (eduMatches && eduMatches.length > 0) {
+          const institution = eduMatches[0].trim();
+          let degree = "Bachelor of Science";
+          let field = "Computer Science";
+          if (/b\.\s*s|bachelor/i.test(resumeText)) degree = "Bachelor of Science";
+          else if (/m\.\s*s|master/i.test(resumeText)) degree = "Master of Science";
+          else if (/ph\.\s*d|doctor/i.test(resumeText)) degree = "Ph.D.";
+
+          if (/computer engineering/i.test(resumeText)) field = "Computer Engineering";
+          else if (/information technology/i.test(resumeText)) field = "Information Technology";
+          else if (/software engineering/i.test(resumeText)) field = "Software Engineering";
+
+          let gpa = null;
+          const gpaMatch = resumeText.match(/gpa:?\s*([0-3]\.\d+|4\.0)/i);
+          if (gpaMatch) gpa = gpaMatch[1];
+
+          education.push({
+            institution,
+            degree,
+            field,
+            start_year: 2020,
+            end_year: 2024,
+            gpa
+          });
+        }
+
+        // 6. Extract Experience
+        const experience = [];
+        const roles = ["Software Engineer", "Full Stack Engineer", "Backend Developer", "Frontend Developer", "Data Scientist", "Product Manager", "Software Developer", "DevOps Engineer"];
+        let foundRole = null;
+        let foundCompany = null;
+        
+        for (const r of roles) {
+          const reg = new RegExp(`\\b${r}\\b`, 'i');
+          if (reg.test(resumeText)) {
+            foundRole = r;
+            break;
+          }
+        }
+        const atCompanyMatch = resumeText.match(/(?:at|with)\s+([A-Z][a-zA-Z0-9&\s]{2,20})(?:\s+as|\s+from|,|\.)/i);
+        if (atCompanyMatch) {
+          foundCompany = atCompanyMatch[1].trim();
+        } else {
+          const suffixMatch = resumeText.match(/([A-Z][a-zA-Z0-9&\s]{2,20}(?:Inc\.|Corp\.|Ltd\.|Co\.|Group))/i);
+          if (suffixMatch) foundCompany = suffixMatch[1].trim();
+        }
+        
+        if (foundRole || foundCompany) {
+          experience.push({
+            company: foundCompany || "Unknown Company",
+            role: foundRole || "Software Professional",
+            start_date: "2021",
+            end_date: "Present",
+            description: "Responsible for full-lifecycle software development and systems integration."
+          });
+        }
+
+        // 7. Extract Projects (empty array as default to avoid fabrication)
+        const projects: any[] = [];
 
         responseObj = {
-          name: "Candidate User",
-          email: "candidate@hirespark.com",
-          phone: "+1 (555) 019-2834",
-          education: [{ institution: "Institute of Technology", degree: "B.S. Software Engineering", field: "Computer Science", start_year: 2020, end_year: 2024, gpa: "3.9" }],
-          experience: [{ company: "HireSpark Partner", role: "Senior Full Stack Engineer", start_date: "2023", end_date: "Present", description: "Built high-throughput Next.js and Supabase web applications." }],
-          projects: [{ name: "AI Vector Matcher", description: "Local transformer candidate matching pipeline", technologies: ["React", "Next.js", "TypeScript"] }],
-          certifications: [{ name: "AWS Certified Solutions Architect", issuer: "Amazon Web Services", year: 2024 }],
+          name,
+          email,
+          phone,
+          education,
+          experience,
+          projects,
+          certifications: [],
           skills: extractedSkills,
         };
         source = "local_resume_parser";
