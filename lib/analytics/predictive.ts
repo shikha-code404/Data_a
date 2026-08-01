@@ -121,7 +121,7 @@ export async function getPredictiveHiringAnalytics(): Promise<PredictiveAnalytic
   // Add candidates from MOCK_PROFILES
   Object.keys(MOCK_PROFILES).forEach((id) => {
     const p = MOCK_PROFILES[id];
-    const name = p.github_username === "alexrivera-dev" ? "Alex Rivera" : (p.github_username === "dev-b" ? "Marcus Vance" : "Devon Carter");
+    const name = p.github_username === "aaravsharma-dev" || p.github_username === "alexrivera-dev" ? "Aarav Sharma" : (p.github_username === "dev-b" ? "Aarav Mehta" : "Rohan Verma");
     const talentScore = p.talent_score?.overallScore || 80;
     const commits = p.github_data?.commits?.total_last_12_months || 50;
     const rep = calculateCommunityReputationFromData(p);

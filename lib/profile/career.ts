@@ -116,30 +116,6 @@ export function estimateSalary(
   location: string
 ): { estimated_range: SalaryRange; basis: string } {
   const stack = primaryStack.toLowerCase();
-  const locationLower = location.toLowerCase();
-
-  let tier: 1 | 2 | 3 = 3;
-  if (
-    locationLower.includes("us") ||
-    locationLower.includes("united states") ||
-    locationLower.includes("sf") ||
-    locationLower.includes("san francisco") ||
-    locationLower.includes("ny") ||
-    locationLower.includes("new york") ||
-    locationLower.includes("california")
-  ) {
-    tier = 1;
-  } else if (
-    locationLower.includes("europe") ||
-    locationLower.includes("uk") ||
-    locationLower.includes("london") ||
-    locationLower.includes("india") ||
-    locationLower.includes("remote") ||
-    locationLower.includes("germany") ||
-    locationLower.includes("singapore")
-  ) {
-    tier = 2;
-  }
 
   let level: "junior" | "mid" | "senior" = "junior";
   if (yearsExp >= 6) {
@@ -161,71 +137,39 @@ export function estimateSalary(
 
   const lookup: Record<
     "frontend" | "backend" | "fullstack" | "general",
-    Record<"junior" | "mid" | "senior", Record<1 | 2 | 3, [number, number]>>
+    Record<"junior" | "mid" | "senior", [number, number]>
   > = {
     frontend: {
-      junior: { 1: [80, 110], 2: [45, 70], 3: [30, 45] },
-      mid: { 1: [110, 150], 2: [70, 105], 3: [45, 65] },
-      senior: { 1: [150, 200], 2: [105, 150], 3: [65, 95] },
+      junior: [1500000, 2000000],
+      mid: [2000000, 2800000],
+      senior: [2800000, 3800000],
     },
     backend: {
-      junior: { 1: [85, 115], 2: [50, 75], 3: [35, 50] },
-      mid: { 1: [115, 160], 2: [75, 115], 3: [50, 75] },
-      senior: { 1: [160, 220], 2: [115, 170], 3: [75, 110] },
+      junior: [1500000, 2000000],
+      mid: [2000000, 2900000],
+      senior: [2900000, 4000000],
     },
     fullstack: {
-      junior: { 1: [90, 120], 2: [55, 80], 3: [38, 55] },
-      mid: { 1: [120, 170], 2: [80, 125], 3: [55, 80] },
-      senior: { 1: [170, 240], 2: [125, 190], 3: [80, 120] },
+      junior: [1500000, 2000000],
+      mid: [2000000, 3000000],
+      senior: [3000000, 4500000],
     },
     general: {
-      junior: { 1: [75, 100], 2: [40, 60], 3: [25, 40] },
-      mid: { 1: [100, 140], 2: [60, 95], 3: [40, 60] },
-      senior: { 1: [140, 180], 2: [95, 140], 3: [60, 90] },
+      junior: [1500000, 2000000],
+      mid: [2000000, 2600000],
+      senior: [2600000, 3500000],
     },
   };
 
-  const [minVal, maxVal] = lookup[tech][level][tier];
-  
-  let currency = "USD";
-  if (tier === 2) {
-    if (locationLower.includes("india")) {
-      return {
-        estimated_range: {
-          min: minVal * 80000,
-          max: maxVal * 80000,
-          currency: "INR",
-        },
-        basis: "ESTIMATE ONLY: This figure is a heuristic lookup based on a static table mapping tech stack (fullstack/backend/frontend), years of experience, and location tier. It is NOT verified market data or an authoritative salary quote."
-      };
-    } else if (locationLower.includes("uk") || locationLower.includes("london")) {
-      return {
-        estimated_range: {
-          min: Math.round(minVal * 0.8),
-          max: Math.round(maxVal * 0.8),
-          currency: "GBP",
-        },
-        basis: "ESTIMATE ONLY: This figure is a heuristic lookup based on a static table mapping tech stack (fullstack/backend/frontend), years of experience, and location tier. It is NOT verified market data or an authoritative salary quote."
-      };
-    } else if (locationLower.includes("europe") || locationLower.includes("germany")) {
-      return {
-        estimated_range: {
-          min: Math.round(minVal * 0.95),
-          max: Math.round(maxVal * 0.95),
-          currency: "EUR",
-        },
-        basis: "ESTIMATE ONLY: This figure is a heuristic lookup based on a static table mapping tech stack (fullstack/backend/frontend), years of experience, and location tier. It is NOT verified market data or an authoritative salary quote."
-      };
-    }
-  }
+  const [minVal, maxVal] = lookup[tech][level];
 
   return {
     estimated_range: {
-      min: minVal * 1000,
-      max: maxVal * 1000,
-      currency,
+      min: minVal,
+      max: maxVal,
+      currency: "INR",
     },
-    basis: "ESTIMATE ONLY: This figure is a heuristic lookup based on a static table mapping tech stack (fullstack/backend/frontend), years of experience, and location tier. It is NOT verified market data or an authoritative salary quote."
+    basis: "ESTIMATE ONLY: This figure is a heuristic lookup based on a static table mapping tech stack and years of experience to market benchmarks in Indian Rupees (INR). It is NOT verified market data or an authoritative salary quote."
   };
 }
 

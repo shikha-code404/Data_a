@@ -242,18 +242,18 @@ Respond with ONLY a valid JSON object — no markdown code fences, no extra top-
 Here is an EXAMPLE of the correct JSON shape, filled with SAMPLE data for a DIFFERENT candidate — this shows you the structure only. Do NOT copy or reference any names, companies, or values from this example:
 
 {
-  "name": "Jordan Ellis",
+  "name": "Aarav Sharma",
   "contact": {
-    "email": "jordan.ellis@example.com",
-    "phone": "+1 (555) 402-8871",
-    "location": "Austin, TX",
-    "github": "jordanellis-dev"
+    "email": "aarav.sharma@devmail.in",
+    "phone": "+91-9876543210",
+    "location": "Bangalore, Karnataka",
+    "github": "aaravsharma-dev"
   },
-  "summary": "Backend-focused software engineer with 4 years of experience building distributed systems in Python and Go.",
+  "summary": "Results-driven Senior Full Stack Engineer with 5+ years of experience building high-throughput web applications using Next.js, Node.js, and Supabase.",
   "experience": [
     {
-      "company": "Northwind Systems",
-      "role": "Backend Engineer",
+      "company": "TechSpark India",
+      "role": "Senior Full Stack Engineer",
       "start_date": "2021",
       "end_date": "Present",
       "description": "Built microservices handling 2M+ daily requests, reducing p99 latency by 30%."

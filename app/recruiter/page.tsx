@@ -382,7 +382,7 @@ export default function RecruiterDashboard() {
                 <span className="text-sm font-bold text-[#F5F5F5] mt-0.5">14:00</span>
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-xs font-bold text-white truncate">Sarah Jenkins</h4>
+                <h4 className="text-xs font-bold text-white truncate">Diya Nair</h4>
                 <p className="text-[10px] text-[#A3A3A3] truncate">Product Designer (L5)</p>
                 <Link
                   href="/recruiter/interviews"

@@ -279,12 +279,12 @@ export default function RecruiterHackathonsPage() {
               <div className="w-10 h-10 rounded-full border-2 border-[#65de85] p-0.5 overflow-hidden shrink-0">
                 <img 
                   className="w-full h-full object-cover rounded-full" 
-                  alt="Marcus Chen" 
+                  alt="Madhav Chen" 
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4TzWqGwDqha-Q96usnoNA_KRkfytO3RyPtm4moEgX6ttoqHi8sgdqbRMS_Q3Q87Gz-Ut5m5LGZ-lF_S1EszaJ8SUJeNq9M866iGNig4LTcVn0wk_bmcCPcj84vgKb5BM2q75QlFOXW1Pdaf1Zf8QvQ8Qgx6LKkWW6hjiyLmKxSAQ4L02zzigTo8-VvkHfE3PPAH3w7nCZT8g0vh94EQdwgdJD81sLURFX_5WsHYDmBI6Jk9SHoF8I"
                 />
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-xs text-white truncate">Marcus Chen</p>
+                <p className="font-bold text-xs text-white truncate">Madhav Chen</p>
                 <p className="text-[9px] text-[#65de85] truncate font-medium mt-0.5">Senior Backend Lead</p>
                 <div className="flex gap-1.5 mt-1.5">
                   <span className="text-[8px] px-1.5 py-0.5 bg-[#1c1c1e] border border-[#353534] rounded text-[#A3A3A3]">Go</span>
@@ -298,12 +298,12 @@ export default function RecruiterHackathonsPage() {
               <div className="w-10 h-10 rounded-full border-2 border-[#ecc154] p-0.5 overflow-hidden shrink-0">
                 <img 
                   className="w-full h-full object-cover rounded-full" 
-                  alt="Sarah Jenkins" 
+                  alt="Diya Nair" 
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9c7mN8rj_vA9-Y9fp4n1BjX_N3BOZVc-IA5cKJkcW34S_9eTRpqoFKxAWJOsebpGa5QLfBje-X39EjDI-ietgFtr7Eg_43vxw0rYl7vb7pnfnuLq1lKMxwpnT6Cwkv1pL8F8qH6UTFcfdZC3w1nEvTjXiv3-iBvkyqlbe48qyoz3s0GG07i4ROhjbcrsAv15sN_0kPcmZ0JjGZdg6_DwheYg1CHYSlhReKLN_8q5SM-wLGCY5czKd"
                 />
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-xs text-white truncate">Sarah Jenkins</p>
+                <p className="font-bold text-xs text-white truncate">Diya Nair</p>
                 <p className="text-[9px] text-[#ecc154] truncate font-medium mt-0.5">React Specialist</p>
                 <div className="flex gap-1.5 mt-1.5">
                   <span className="text-[8px] px-1.5 py-0.5 bg-[#1c1c1e] border border-[#353534] rounded text-[#A3A3A3]">TypeScript</span>
@@ -336,12 +336,12 @@ export default function RecruiterHackathonsPage() {
               <div className="w-10 h-10 rounded-full border-2 border-[#A3A3A3]/50 p-0.5 overflow-hidden shrink-0">
                 <img 
                   className="w-full h-full object-cover rounded-full" 
-                  alt="Elena Rossi" 
+                  alt="Esha Sharma" 
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuBshBCN8Eph7u-_Nlt3WgwXMiYAylJUH0UdsNp-uIZ0Jw68wCaRt0YorZhi7Vgd6eNiGyO8lnaIo8D6xORps7CzrTJFaknyGiJdDxv-IklaharqkJ7HQUtlNAYaZlHvO4cT1JnF4iqcXUzn3b1NwwVJB2ZTil9LOzEvt891_i5MHyj0LTmP-bT7Yirgb60bJhE8KU2KA0KalV0vIj77J788sukLTgMLkWwY5vvXN3Tuv4TrZtDg5und"
                 />
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-xs text-white truncate">Elena Rossi</p>
+                <p className="font-bold text-xs text-white truncate">Esha Sharma</p>
                 <p className="text-[9px] text-[#A3A3A3] truncate font-medium mt-0.5">System Architect</p>
                 <div className="flex gap-1.5 mt-1.5">
                   <span className="text-[8px] px-1.5 py-0.5 bg-[#1c1c1e] border border-[#353534] rounded text-[#A3A3A3]">Rust</span>

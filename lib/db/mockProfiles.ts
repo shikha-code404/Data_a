@@ -1,12 +1,12 @@
 export const MOCK_PROFILES: Record<string, any> = {
   "0ee73e0e-0529-4480-a16c-15748a277bde": {
     user_id: "0ee73e0e-0529-4480-a16c-15748a277bde",
-    github_username: "alexrivera-dev",
+    github_username: "aaravsharma-dev",
     talent_profile: {
       resume: {
         title: "Senior Full Stack Engineer",
         skills: ["React", "Next.js", "TypeScript", "Node.js", "Supabase", "Python"],
-        experience: [{ company: "TechSpark", role: "Senior Developer", description: "3+ years Next.js & Supabase" }]
+        experience: [{ company: "TechSpark India", role: "Senior Developer", description: "3+ years Next.js & Supabase" }]
       },
       github: {
         topLanguages: { "TypeScript": 85, "Python": 15 },

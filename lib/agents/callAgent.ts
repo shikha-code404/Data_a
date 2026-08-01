@@ -91,17 +91,17 @@ values in this example. They belong to a different person and must never
 appear in your actual output:
 
 {
-  "name": "Jordan Ellis",
+  "name": "Aarav Sharma",
   "contact": {
-    "email": "jordan.ellis@example.com",
-    "phone": "+1 (555) 402-8871",
-    "location": "Austin, TX",
-    "github": "jordanellis-dev"
+    "email": "aarav.sharma@devmail.in",
+    "phone": "+91-9876543210",
+    "location": "Bangalore, Karnataka",
+    "github": "aaravsharma-dev"
   },
   "summary": "Backend-focused software engineer with 4 years of experience building distributed systems in Python and Go. Strong track record shipping production services at scale.",
   "experience": [
     {
-      "company": "Northwind Systems",
+      "company": "TechSpark India",
       "role": "Backend Engineer",
       "start_date": "2021",
       "end_date": "Present",
@@ -110,7 +110,7 @@ appear in your actual output:
   ],
   "education": [
     {
-      "institution": "University of Texas at Austin",
+      "institution": "IIT Bombay",
       "degree": "Bachelor of Science",
       "field": "Computer Science",
       "start_year": 2016,
@@ -706,15 +706,15 @@ RULES:
         const candidateName = (resumeData.name && resumeData.name !== "Candidate User" ? resumeData.name : null)
           || (!isMockName && rawResume.name ? rawResume.name : null)
           || talentProfile.name
-          || "Candidate User";
+          || "Aarav Sharma";
 
         const email = (resumeData.email && !resumeData.email.includes("hirespark.com") ? resumeData.email : null)
           || (!isMockName && rawResume.email ? rawResume.email : null)
           || talentProfile.email
-          || "candidate@hirespark.com";
+          || "aarav.sharma@hirespark.in";
 
-        const phone = resumeData.phone || (!isMockName ? rawResume.phone : null) || talentProfile.phone || "";
-        const location = resumeData.location || (!isMockName ? rawResume.location : null) || talentProfile.location || "";
+        const phone = resumeData.phone || (!isMockName ? rawResume.phone : null) || talentProfile.phone || "+91 98765 43210";
+        const location = resumeData.location || (!isMockName ? rawResume.location : null) || talentProfile.location || "Bangalore, Karnataka";
 
         const skillsSet = new Set<string>();
         if (Array.isArray(resumeData.skills)) resumeData.skills.forEach((s: any) => typeof s === "string" && s.trim() && skillsSet.add(s.trim()));
@@ -1426,15 +1426,15 @@ RULES:
         const candidateName = (resumeData.name && resumeData.name !== "Candidate User" ? resumeData.name : null)
           || (!isMockName && rawResume.name ? rawResume.name : null)
           || talentProfile.name
-          || "Candidate User";
+          || "Aarav Sharma";
 
         const email = (resumeData.email && !resumeData.email.includes("hirespark.com") ? resumeData.email : null)
           || (!isMockName && rawResume.email ? rawResume.email : null)
           || talentProfile.email
-          || "candidate@hirespark.com";
+          || "aarav.sharma@hirespark.in";
 
-        const phone = resumeData.phone || (!isMockName ? rawResume.phone : null) || talentProfile.phone || "";
-        const location = resumeData.location || (!isMockName ? rawResume.location : null) || talentProfile.location || "";
+        const phone = resumeData.phone || (!isMockName ? rawResume.phone : null) || talentProfile.phone || "+91 98765 43210";
+        const location = resumeData.location || (!isMockName ? rawResume.location : null) || talentProfile.location || "Bangalore, Karnataka";
 
         const skillsSet = new Set<string>();
         if (Array.isArray(resumeData.skills)) resumeData.skills.forEach((s: any) => typeof s === "string" && s.trim() && skillsSet.add(s.trim()));

@@ -220,9 +220,9 @@ export default function GuidancePage() {
               <div className="bg-[#171717] rounded-lg p-6 border border-[#ecc154]/20 shadow-inner text-center animate-fade-in space-y-2">
                 <p className="text-xs text-[#A3A3A3] uppercase tracking-wider font-semibold">Estimated Market Range</p>
                 <h3 className="text-3xl font-extrabold text-[#ecc154] tracking-tight">
-                  {salaryRange ? `$${salaryRange.estimated_range?.min?.toLocaleString()} - $${salaryRange.estimated_range?.max?.toLocaleString()}` : "$145,000 - $175,000"}
+                  {salaryRange ? `₹${salaryRange.estimated_range?.min?.toLocaleString("en-IN")} - ₹${salaryRange.estimated_range?.max?.toLocaleString("en-IN")}` : "₹15,00,000 - ₹20,00,000"}
                 </h3>
-                <p className="text-xs text-[#D4D4D4]">Annual Base Salary ({salaryRange?.estimated_range?.currency || "USD"})</p>
+                <p className="text-xs text-[#D4D4D4]">Annual Base Salary ({salaryRange?.estimated_range?.currency || "INR"})</p>
                 <button 
                   onClick={() => setShowComp(false)}
                   className="text-xs text-[#A3A3A3] hover:text-white underline mt-2 block mx-auto"

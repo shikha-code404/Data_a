@@ -75,15 +75,15 @@ export const mockTalentScore = {
 export const mockCandidates: Candidate[] = [
   {
     id: "cand-1",
-    name: "Elena Rostova",
+    name: "Ananya Sharma",
     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
     title: "Senior Full-Stack Engineer",
     skills: ["React", "TypeScript", "Node.js", "Next.js", "GraphQL", "PostgreSQL"],
     matchScore: 94,
     overallScore: 91,
-    email: "elena.rostova@devmail.io",
-    phone: "+1 (555) 019-2834",
-    location: "San Francisco, CA (Remote)",
+    email: "ananya.sharma@devmail.in",
+    phone: "+91 98765 43210",
+    location: "Bangalore, Karnataka (Remote)",
     bio: "Passionate engineer with 6+ years of experience constructing high-scale web applications. Open-source contributor and technical mentor.",
     subScores: [
       { category: "Coding Ability", value: 95 },
@@ -110,23 +110,23 @@ export const mockCandidates: Candidate[] = [
     ],
     education: [
       {
-        degree: "B.S. in Computer Science",
-        school: "Stanford University",
+        degree: "B.Tech in Computer Science",
+        school: "IIT Bombay",
         year: "2019"
       }
     ]
   },
   {
     id: "cand-2",
-    name: "Marcus Vance",
+    name: "Aarav Mehta",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
     title: "AI/ML Engineering Lead",
     skills: ["Python", "PyTorch", "Transformers", "LLMs", "LangChain", "FastAPI"],
     matchScore: 89,
     overallScore: 88,
-    email: "marcus.v@neuralnet.org",
-    phone: "+1 (555) 041-9988",
-    location: "Austin, TX (On-site)",
+    email: "aarav.m@neuralnet.in",
+    phone: "+91 98123 45678",
+    location: "Mumbai, Maharashtra (On-site)",
     bio: "AI researcher turned practical builder. Specializing in fine-tuning large language models and developing low-latency agent architectures.",
     subScores: [
       { category: "Coding Ability", value: 88 },
@@ -147,23 +147,23 @@ export const mockCandidates: Candidate[] = [
     ],
     education: [
       {
-        degree: "M.S. in Intelligent Systems",
-        school: "Carnegie Mellon University",
+        degree: "M.Tech in Artificial Intelligence",
+        school: "IIT Delhi",
         year: "2021"
       }
     ]
   },
   {
     id: "cand-3",
-    name: "Yuki Tanaka",
+    name: "Priya Patel",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
     title: "Senior Product Engineer",
     skills: ["React Native", "TypeScript", "Tailwind CSS", "Expo", "Swift", "Firebase"],
     matchScore: 85,
     overallScore: 84,
-    email: "yuki.t@proddev.net",
-    phone: "+1 (555) 082-1277",
-    location: "New York, NY (Hybrid)",
+    email: "priya.p@proddev.in",
+    phone: "+91 97654 32109",
+    location: "Delhi NCR (Hybrid)",
     bio: "Focusing on delightful, responsive mobile interfaces. Obsessed with micro-interactions, layout physics, and pixel-perfect design assets.",
     subScores: [
       { category: "Coding Ability", value: 84 },
@@ -184,23 +184,23 @@ export const mockCandidates: Candidate[] = [
     ],
     education: [
       {
-        degree: "B.A. in Interactive Media Design",
-        school: "New York University",
+        degree: "B.E. in Computer Science",
+        school: "BITS Pilani",
         year: "2020"
       }
     ]
   },
   {
     id: "cand-4",
-    name: "Devon Carter",
+    name: "Rohan Verma",
     avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
     title: "DevOps & Cloud Architect",
     skills: ["AWS", "Kubernetes", "Terraform", "Docker", "Go", "GitHub Actions"],
     matchScore: 78,
     overallScore: 81,
-    email: "devon.c@infraflow.io",
-    phone: "+1 (555) 039-4455",
-    location: "Seattle, WA (Remote)",
+    email: "rohan.c@infraflow.in",
+    phone: "+91 96543 21098",
+    location: "Hyderabad, Telangana (Remote)",
     bio: "System reliability specialist with a programming background. Enjoys automating complex cloud setups and designing bulletproof CI/CD pipelines.",
     subScores: [
       { category: "Coding Ability", value: 80 },
@@ -221,23 +221,23 @@ export const mockCandidates: Candidate[] = [
     ],
     education: [
       {
-        degree: "B.S. in Computer Engineering",
-        school: "University of Washington",
+        degree: "B.Tech in Computer Engineering",
+        school: "IIT Madras",
         year: "2020"
       }
     ]
   },
   {
     id: "cand-5",
-    name: "Sarah Jenkins",
+    name: "Diya Nair",
     avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150",
     title: "Backend Core Systems Engineer",
     skills: ["Rust", "Go", "gRPC", "Redis", "Distributed Systems", "Kafka"],
     matchScore: 92,
     overallScore: 89,
-    email: "sjenk@rustcore.net",
-    phone: "+1 (555) 066-7788",
-    location: "Chicago, IL (Hybrid)",
+    email: "diya.n@rustcore.in",
+    phone: "+91 95432 10987",
+    location: "Pune, Maharashtra (Hybrid)",
     bio: "Low-latency systems designer. Deeply interested in concurrency patterns, lock-free data structures, and memory efficiency in Rust.",
     subScores: [
       { category: "Coding Ability", value: 96 },
@@ -258,8 +258,8 @@ export const mockCandidates: Candidate[] = [
     ],
     education: [
       {
-        degree: "B.S. in Computer Science",
-        school: "University of Illinois Urbana-Champaign",
+        degree: "B.Tech in Computer Science",
+        school: "IIT Kharagpur",
         year: "2021"
       }
     ]
@@ -269,51 +269,131 @@ export const mockCandidates: Candidate[] = [
 export const mockJobs: Job[] = [
   {
     id: "job-1",
-    title: "Senior Product Engineer (Next.js & AI)",
-    company: "Aether AI",
-    location: "San Francisco, CA (Hybrid)",
+    title: "Senior AI & Platform Engineer",
+    company: "Zomato AI Labs",
+    location: "Gurugram, Haryana (Hybrid)",
     type: "Full-time",
-    salary: "$160k - $200k + Equity",
-    matchScore: 94,
-    description: "Join our core team building the next generation of AI-driven developer workflows. You will design, build, and optimize customer-facing product interfaces, integrating with LLM backends.",
+    salary: "₹32,00,000 - ₹45,00,000 PA + ESOPs",
+    matchScore: 95,
+    description: "Design high-concurrency LLM agents, real-time demand forecasting models, and candidate recommendation microservices. Work directly with core AI Infrastructure teams.",
     requirements: [
-      "5+ years of experience with React, TypeScript, and modern styling utilities.",
-      "Deep understanding of Next.js App Router, SSR, and client/server component patterns.",
-      "Experience interfacing directly with OpenAI, Anthropic, or Hugging Face APIs."
+      "4+ years of experience building Python and FastAPI microservices.",
+      "Hands-on experience with PyTorch, LangChain, and vector embeddings.",
+      "Familiarity with Next.js or React frontend integration."
     ],
-    badges: ["Next.js", "React", "AI Integration", "TypeScript"]
+    badges: ["Python", "FastAPI", "PyTorch", "TypeScript", "LangChain"]
   },
   {
     id: "job-2",
-    title: "Distributed Systems Developer (Rust/Go)",
-    company: "ScyllaLabs",
-    location: "Remote (US/Canada)",
+    title: "Lead Full-Stack Developer (Next.js & Supabase)",
+    company: "Razorpay",
+    location: "Bangalore, Karnataka (On-site)",
     type: "Full-time",
-    salary: "$170k - $220k",
-    matchScore: 82,
-    description: "We are building an ultra-fast event streaming platform. You will be responsible for creating reliable, fault-tolerant cluster consensus protocols and optimizing memory layouts.",
+    salary: "₹28,00,000 - ₹38,00,000 PA",
+    matchScore: 92,
+    description: "Architect end-to-end merchant checkout suites and AI fraud detection dashboards. Optimize server actions, SSR caching, and high-volume transaction UI components.",
     requirements: [
-      "Strong experience in Rust or Go, with a focus on multithreaded systems.",
-      "Familiarity with network programming, TCP/UDP sockets, and serialization (protobuf/flatbuffers).",
-      "Knowledge of consensus algorithms like Raft or Paxos is a major plus."
+      "5+ years of experience with React, Next.js App Router, and TypeScript.",
+      "Experience with Supabase PostgreSQL, RLS policies, and serverless functions.",
+      "Proven track record building high-converting fintech interfaces."
     ],
-    badges: ["Rust", "Go", "Distributed Systems", "gRPC"]
+    badges: ["Next.js", "React", "TypeScript", "Supabase", "Node.js"]
   },
   {
     id: "job-3",
-    title: "AI Mobile App Engineer (React Native)",
-    company: "MindLink Tech",
-    location: "Austin, TX (On-site)",
+    title: "Cloud Infrastructure & DevOps Lead",
+    company: "PhonePe Tech",
+    location: "Bangalore, Karnataka (Hybrid)",
     type: "Full-time",
-    salary: "$130k - $160k",
-    matchScore: 71,
-    description: "Help us build a companion mobile app that uses local and cloud-based models to summarize, search, and navigate day-to-day voice conversations. Focus on performance, animations, and fluid experiences.",
+    salary: "₹35,00,000 - ₹50,00,000 PA",
+    matchScore: 88,
+    description: "Manage multi-region Kubernetes clusters handling 100M+ daily UPI requests. Implement zero-downtime CI/CD pipelines, automated security scanning, and failovers.",
     requirements: [
-      "3+ years of experience with React Native and Expo.",
-      "Familiarity with audio processing APIs and local database structures (SQLite, WatermelonDB).",
-      "Experience with Tailwind CSS / NativeWind styling."
+      "Strong background in AWS, Kubernetes, and Docker container orchestration.",
+      "Experience with Terraform, Infrastructure as Code, and Prometheus monitoring.",
+      "Proficiency in Go or Python for infrastructure automation."
     ],
-    badges: ["React Native", "Expo", "Audio API", "Tailwind CSS"]
+    badges: ["AWS", "Kubernetes", "Docker", "Terraform", "Go"]
+  },
+  {
+    id: "job-4",
+    title: "Senior Backend Microservices Specialist",
+    company: "Swiggy Engineering",
+    location: "Bangalore, Karnataka (Remote)",
+    type: "Full-time",
+    salary: "₹26,00,000 - ₹36,00,000 PA",
+    matchScore: 85,
+    description: "Build distributed dispatch engines, event-driven ordering pipelines, and low-latency location indexing services serving peak-hour traffic.",
+    requirements: [
+      "Experience building distributed systems in Java, Spring Boot, or Go.",
+      "Deep understanding of Redis caching, Kafka queues, and PostgreSQL indexing.",
+      "Experience with gRPC and RESTful API architecture."
+    ],
+    badges: ["Java", "Spring Boot", "Go", "Redis", "Kafka"]
+  },
+  {
+    id: "job-5",
+    title: "AI Mobile App Engineer (React Native & Expo)",
+    company: "Cred",
+    location: "Bangalore, Karnataka (Hybrid)",
+    type: "Full-time",
+    salary: "₹24,00,000 - ₹34,00,000 PA + Equity",
+    matchScore: 81,
+    description: "Craft high-performance, fluid mobile UI experiences, custom design system animations, and offline-first mobile payment workflows.",
+    requirements: [
+      "3+ years with React Native, Expo, and TypeScript.",
+      "Experience building custom micro-interactions and smooth 60fps animations.",
+      "Familiarity with GraphQL and state management (Redux/Zustand)."
+    ],
+    badges: ["React Native", "Expo", "TypeScript", "GraphQL", "Redux"]
+  },
+  {
+    id: "job-6",
+    title: "Junior Frontend Engineer (Beginner Role)",
+    company: "Postman India",
+    location: "Hyderabad, Telangana (Remote)",
+    type: "Full-time",
+    salary: "₹15,00,000 - ₹20,00,000 PA",
+    matchScore: 84,
+    description: "Build client-side API workspace features, UI components, and accessible web interface suites under senior technical mentorship.",
+    requirements: [
+      "0-2 years of experience with JavaScript, HTML, CSS, and React.",
+      "Understanding of REST APIs, Git, and web fundamentals.",
+      "Eagerness to learn design system standards and client state management."
+    ],
+    badges: ["React", "TypeScript", "JavaScript", "HTML", "CSS"]
+  },
+  {
+    id: "job-7",
+    title: "Full Stack Machine Learning Engineer",
+    company: "Google India",
+    location: "Bangalore, Karnataka (Hybrid)",
+    type: "Full-time",
+    salary: "₹38,00,000 - ₹55,00,000 PA + Stock Units",
+    matchScore: 74,
+    description: "Develop scalable ML pipelines for candidate ranking, vector similarity matching, and natural language search indexing.",
+    requirements: [
+      "Proficiency in Python, Scikit-Learn, Pandas, NumPy, and TensorFlow/PyTorch.",
+      "Experience with Google Cloud Platform, BigQuery, and vector DB search.",
+      "Solid foundation in data structures and C++ or TypeScript."
+    ],
+    badges: ["Python", "Machine Learning", "Scikit-Learn", "Google Cloud", "NumPy"]
+  },
+  {
+    id: "job-8",
+    title: "Associate Software Engineer (Beginner Role)",
+    company: "Razorpay Labs",
+    location: "Bangalore, Karnataka (On-site)",
+    type: "Full-time",
+    salary: "₹15,00,000 - ₹20,00,000 PA",
+    matchScore: 88,
+    description: "Collaborate with core engineering teams building modern fintech UI portals, checkout widgets, and internal analytics tools.",
+    requirements: [
+      "0-2 years experience with React, Next.js, and JavaScript.",
+      "Good understanding of SQL databases, APIs, and web security basics.",
+      "Strong problem-solving mindset and team communication."
+    ],
+    badges: ["React", "Next.js", "TypeScript", "SQL", "JavaScript"]
   }
 ];
 
